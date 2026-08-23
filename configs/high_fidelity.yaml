@@ -1,0 +1,56 @@
+# High-fidelity profile — accurate tables and referenced figure assets.
+#
+# This is the profile used for the acceptance run. It costs roughly 2-3x the
+# default in wall time on CPU, in exchange for TableFormer "accurate" mode and
+# 2x-scale rasters good enough to read instrument tags in a preserved figure.
+
+profile: high_fidelity
+
+docling:
+  backend: docling_parse
+  do_ocr: false                   # the acceptance PDF is digitally generated and text-searchable
+  do_table_structure: true
+  table_mode: accurate            # TableFormerMode.ACCURATE
+  table_cell_matching: true
+  generate_page_images: true
+  generate_picture_images: true
+  generate_table_images: false    # table crops are produced on demand via TableItem.get_image
+  images_scale: 2.0
+  do_picture_classification: false
+  enable_heading_hierarchy: true
+  accelerator_device: cpu         # ADR-002: the local MX450 exposes only 2 GiB VRAM
+  num_threads: 4
+  picture_description:
+    enabled: false
+
+export:
+  emit_page_anchors: true
+  page_anchor_template: "<!-- page: {page_no} -->"
+  strip_furniture: true
+  remove_repeated_furniture_text: true
+  furniture_min_page_fraction: 0.5
+  complex_table_as_html: true
+  save_page_images: true
+  keep_raw_serializer_output: true
+  escape_underscores: false
+
+limits:
+  max_file_size_mb: 256
+  max_pages: 2000
+  document_timeout_s: 3600
+  max_render_pages: 200
+
+thresholds:
+  sparse_text_char_threshold: 200
+  image_heavy_area_fraction: 0.25
+  page_char_coverage_warn: 0.80
+  page_char_coverage_fail: 0.50
+  page_token_jaccard_warn: 0.70
+  page_token_recall_warn: 0.85
+  critical_token_recall_fail: 0.95
+  max_empty_table_cell_ratio: 0.50
+  min_pages_with_provenance: 1.0
+
+redact_text_samples: true
+text_sample_chars: 160
+log_level: INFO

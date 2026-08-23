@@ -1,0 +1,25 @@
+# Auto profile — preflight evidence chooses the strategy, with an audited reason.
+#
+# Decision rule (see pipeline_factory.choose_profile):
+#   * >= 80% of pages sparse/empty, or < 50 chars/page  -> scanned  (OCR needed)
+#   * native text present AND non-repeated figures found -> high_fidelity
+#   * otherwise                                          -> default
+#
+# The chosen profile and the measurements behind it are written to
+# run_manifest.json under `profile` / `profile_reason` / `profile_evidence`.
+
+profile: auto
+
+docling:
+  backend: docling_parse
+  accelerator_device: cpu
+  num_threads: 4
+  picture_description:
+    enabled: false
+
+export:
+  emit_page_anchors: true
+  strip_furniture: true
+  complex_table_as_html: true
+
+log_level: INFO

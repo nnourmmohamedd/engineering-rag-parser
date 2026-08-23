@@ -71,6 +71,13 @@ _PUNCT_FOLD = {
 
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _WS_RE = re.compile(r"\s+")
+
+#: pdfminer emits ``(cid:NNN)`` when a glyph has no usable ToUnicode mapping —
+#: typically a bullet or a symbol font. It is an artifact of the *extractor*, not
+#: content of the document, and leaving it in the baseline would both invent a
+#: number token ("127") and report a phantom loss when Docling renders the glyph
+#: properly. Removed from both sides of every comparison.
+_CID_RE = re.compile(r"\(cid:\d+\)")
 # A hyphen at end of line followed by a lowercase continuation = wrapped word.
 _HYPHEN_WRAP_RE = re.compile(r"(\w)-\s*\n\s*([a-z])")
 
@@ -119,6 +126,7 @@ def normalize_for_compare(text: str) -> str:
     if not text:
         return ""
     s = unicodedata.normalize("NFKC", text)
+    s = _CID_RE.sub(" ", s)
     for src, dst in _LIGATURES.items():
         s = s.replace(src, dst)
     for src, dst in _PUNCT_FOLD.items():
@@ -151,6 +159,7 @@ def critical_tokens(text: str) -> set[str]:
     # Only the safe part of normalisation: fix ligatures/soft hyphens and
     # collapse whitespace. No case folding, no dash unification, no digit masking.
     s = unicodedata.normalize("NFKC", text)
+    s = _CID_RE.sub(" ", s)
     for src, dst in _LIGATURES.items():
         s = s.replace(src, dst)
     s = s.replace("­", "").replace("​", "")

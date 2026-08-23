@@ -1,0 +1,49 @@
+# Default profile — CPU-safe behaviour for ordinary digital PDFs.
+#
+# Optimised for throughput on a machine with no usable GPU. Table structure runs
+# in "fast" mode and page/picture rasters are kept at a modest scale. Use
+# high_fidelity.yaml when table accuracy or figure assets matter.
+
+profile: default
+
+docling:
+  backend: docling_parse          # DoclingParseDocumentBackend (dlparse_v4 is removed upstream)
+  do_ocr: false                   # Docling's own default is TRUE; forced off for digital text
+  do_table_structure: true
+  table_mode: fast
+  table_cell_matching: true
+  generate_page_images: true
+  generate_picture_images: true
+  images_scale: 1.5
+  enable_heading_hierarchy: true
+  accelerator_device: cpu
+  num_threads: 4
+  picture_description:
+    enabled: false                # ADR-005: never describe engineering diagrams by default
+
+export:
+  emit_page_anchors: true
+  strip_furniture: true
+  remove_repeated_furniture_text: true
+  complex_table_as_html: true
+  save_page_images: true
+  keep_raw_serializer_output: true
+  escape_underscores: false       # preserve tags such as FT_101
+
+limits:
+  max_file_size_mb: 256
+  max_pages: 2000
+  document_timeout_s: 3600
+
+thresholds:
+  sparse_text_char_threshold: 200
+  image_heavy_area_fraction: 0.25
+  page_char_coverage_warn: 0.80
+  page_char_coverage_fail: 0.50
+  page_token_recall_warn: 0.85
+  critical_token_recall_fail: 0.95
+  max_empty_table_cell_ratio: 0.50
+
+redact_text_samples: true
+text_sample_chars: 160
+log_level: INFO

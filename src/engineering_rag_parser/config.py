@@ -120,7 +120,11 @@ class DoclingOptions(_Frozen):
     ``False`` and enables it only from preflight evidence.
     """
 
-    backend: Literal["dlparse_v4", "dlparse_v2", "docling_parse", "pypdfium2"] = "dlparse_v4"
+    # Introspection of the installed docling 2.121.0 shows DoclingParseV4DocumentBackend
+    # is a deprecation shim that emits FutureWarning and "will raise an error in a future
+    # release"; PdfBackend.DLPARSE_V1/V2/V4 all normalise back to DOCLING_PARSE. The
+    # widely copied `dlparse_v4` recipe is therefore obsolete and is not offered here.
+    backend: Literal["docling_parse", "threaded_docling_parse", "pypdfium2"] = "docling_parse"
     do_ocr: bool = False
     ocr_engine: Literal["auto", "easyocr", "rapidocr", "tesseract", "tesseract_cli", "ocrmac"] = "easyocr"
     ocr_languages: tuple[str, ...] = ("en",)

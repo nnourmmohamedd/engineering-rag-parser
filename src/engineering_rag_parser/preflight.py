@@ -34,7 +34,7 @@ from .config import ParserConfig
 from .domain import FurnitureCandidate, ImageBlock, SourceManifest, SourcePage
 from .normalization import normalize_for_compare, normalize_line, redact, text_sha256
 
-__all__ = ["PreflightError", "inspect_source", "render_page_png"]
+__all__ = ["PreflightError", "inspect_source", "native_page_texts", "render_page_png"]
 
 logger = logging.getLogger(__name__)
 
@@ -418,6 +418,8 @@ def inspect_source(path: Path | str, config: ParserConfig) -> SourceManifest:
     # banner here would mark all 27 pages "image-heavy" and destroy the signal.
     for page in pages:
         rows = page_image_rows[page.page_no]
+        for sig, blk in rows:
+            blk.is_repeated = image_signatures[sig] >= repeat_cutoff
         substantive = [blk for sig, blk in rows if image_signatures[sig] < repeat_cutoff]
         substantive_area = sum(b.area_fraction or 0.0 for b in substantive)
         page.substantive_image_count = len(substantive)
@@ -495,6 +497,19 @@ def _tool_versions() -> dict[str, str]:
         "pypdfium2": str(PYPDFIUM_INFO),
         "pdfium": str(PDFIUM_INFO),
     }
+
+
+def native_page_texts(pdf_path: Path | str, config: ParserConfig) -> dict[int, str]:
+    """Native per-page text, for in-memory validation only.
+
+    This is the independent baseline the coverage checks compare Docling
+    against. It is deliberately **not** stored in ``source/manifest.json``: the
+    document may be confidential, and writing its full text into a JSON artifact
+    would create an easier-to-leak copy than the PDF itself. Callers hold it in
+    memory for the duration of a run and discard it.
+    """
+    lines_by_page = _page_text_lines(Path(pdf_path), config)
+    return {page_no: "\n".join(t for t, _, _ in lines) for page_no, lines in lines_by_page.items()}
 
 
 def render_page_png(pdf_path: Path, page_no: int, dest: Path, scale: float = 1.5) -> Path:

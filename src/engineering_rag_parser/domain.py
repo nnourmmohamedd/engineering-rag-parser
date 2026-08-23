@@ -67,6 +67,11 @@ class ImageBlock(_Model):
         default=None, description="(x0, y0, x1, y1) in PDF points, origin bottom-left."
     )
     area_fraction: float | None = Field(default=None, description="Fraction of page area covered.")
+    is_repeated: bool = Field(
+        default=False,
+        description="True when this exact (bbox, pixel-size) signature recurs across the document, "
+        "i.e. it is page furniture (banner, watermark) rather than a figure.",
+    )
 
 
 class SourcePage(_Model):
@@ -218,14 +223,33 @@ class PageCoverage(_Model):
     parsed_chars: int = 0
     source_words: int = 0
     parsed_words: int = 0
+    furniture_chars_excluded: int = Field(
+        default=0,
+        description="Characters removed from the NATIVE baseline because preflight proved them to be "
+        "repeated header/footer furniture. Excluded from both sides so the comparison is like-for-like; "
+        "counting them as loss would flag every page for the page number in its own footer.",
+    )
+    source_chars_with_furniture: int = 0
     char_coverage: float = Field(default=0.0, description="parsed_chars / source_chars, clipped to [0, 2].")
     token_jaccard: float = 0.0
     token_recall: float = Field(default=0.0, description="Fraction of source word types present in parsed text.")
     critical_token_recall: float = Field(
         default=1.0, description="Recall over numbers, units and ALL-CAPS acronyms only."
     )
-    missing_critical_tokens: list[str] = Field(default_factory=list)
+    missing_critical_tokens: list[str] = Field(
+        default_factory=list,
+        description="Critical tokens absent from this page AND from its neighbours — a candidate true loss.",
+    )
+    relocated_critical_tokens: list[str] = Field(
+        default_factory=list,
+        description="Critical tokens absent from this page but present on an adjacent page. Docling "
+        "attributes a paragraph spanning a page break to the page where it STARTS, which is correct "
+        "reading-order repair, not loss.",
+    )
     missing_spans: list[str] = Field(default_factory=list)
+    relocated_spans: list[str] = Field(
+        default_factory=list, description="Spans found on an adjacent page rather than this one."
+    )
     duplicated_spans: list[str] = Field(default_factory=list)
     is_sparse_text: bool = False
     is_image_heavy: bool = False

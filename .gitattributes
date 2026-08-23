@@ -1,0 +1,8 @@
+# Artifacts and source are compared byte-for-byte across platforms, so text
+# files must NOT be CRLF-translated on checkout. The determinism check and the
+# artifact SHA-256 values depend on this.
+* text=auto eol=lf
+
+*.png binary
+*.pdf binary
+*.ipynb text eol=lf

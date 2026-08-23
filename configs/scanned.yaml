@@ -1,0 +1,39 @@
+# Scanned profile — OCR-oriented, for image-only documents.
+#
+# WARNING: do not run this against a digitally generated PDF. Forcing full-page
+# OCR over an existing text layer duplicates and degrades clean text, which the
+# `no_duplicated_spans` check is specifically built to catch.
+#
+# Requires the optional OCR extra:  pip install -e ".[ocr]"
+# EasyOCR downloads detection/recognition weights (~100 MB) on first use.
+
+profile: scanned
+
+docling:
+  backend: docling_parse
+  do_ocr: true
+  ocr_engine: easyocr
+  ocr_languages: ["en"]
+  ocr_force_full_page: true
+  ocr_mode: full_page
+  do_table_structure: true
+  table_mode: accurate
+  generate_page_images: true
+  generate_picture_images: true
+  images_scale: 2.0
+  accelerator_device: cpu
+  num_threads: 4
+
+export:
+  emit_page_anchors: true
+  strip_furniture: true
+  complex_table_as_html: true
+
+thresholds:
+  # OCR text is noisier; character coverage is a weaker signal, so the warn
+  # threshold is relaxed while critical-token recall is NOT.
+  page_char_coverage_warn: 0.60
+  page_char_coverage_fail: 0.35
+  critical_token_recall_fail: 0.95
+
+log_level: INFO
