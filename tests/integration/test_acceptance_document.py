@@ -166,17 +166,26 @@ class TestGateTables:
         assert {1, 2, 3} <= {int(k) for k in located}
 
     def test_each_labelled_table_reports_a_page_and_title(self, acceptance_run) -> None:
-        located = _check(acceptance_run, "labelled_tables_located").evidence["tables"]
-        for number in ("1", "2", "3"):
+        located = _located_tables(acceptance_run)
+        for number in (1, 2, 3):
             entry = located[number]
             assert entry["page_no"] is not None, f"Table {number} has no page"
             assert entry["title"], f"Table {number} has no title"
+            assert entry["outcome"], f"Table {number} has no reported outcome"
 
     def test_table_numbering_is_not_assumed_to_follow_pages(self, acceptance_run) -> None:
         """Verifies the located pages come from evidence, not from an ordering assumption."""
-        located = _check(acceptance_run, "labelled_tables_located").evidence["tables"]
-        pages = [located[n]["page_no"] for n in ("1", "2", "3")]
+        located = _located_tables(acceptance_run)
+        pages = [located[n]["page_no"] for n in (1, 2, 3)]
         assert len(set(pages)) == 3
+
+    def test_a_table_detected_as_a_picture_is_still_accounted_for(self, acceptance_run) -> None:
+        """Docling may classify a raster table as a picture; it must not go unreported."""
+        for entry in _located_tables(acceptance_run).values():
+            if entry["docling_regions"] == 0:
+                assert entry["covered_by_picture_regions"], (
+                    f"table on page {entry['page_no']} has neither a table region nor a picture region"
+                )
 
     def test_unrecovered_tables_are_preserved_and_flagged(self, acceptance_run) -> None:
         """The no-silent-loss gate: unreadable content must leave an asset and a warning."""
@@ -240,6 +249,17 @@ class TestGateArtifactsAndStatus:
             .split("\n")
         )
         assert len(lines) == EXPECTED_PAGES + 1  # header + one row per page
+
+
+def _located_tables(run_result) -> dict[int, dict]:
+    """Table evidence keyed by int.
+
+    The in-memory ``CheckResult`` keeps integer table numbers; only the JSON
+    round-trip stringifies them. Normalising here lets the assertions read the
+    same whether the report came from memory or from disk.
+    """
+    evidence = _check(run_result, "labelled_tables_located").evidence["tables"]
+    return {int(k): v for k, v in evidence.items()}
 
 
 def _check(run_result, check_id: str):

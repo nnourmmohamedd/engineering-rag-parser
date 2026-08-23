@@ -244,41 +244,88 @@ def table_checks(
     config: ParserConfig,
     markdown_text: str = "",
     run_root: Path | None = None,
+    pictures: list[PictureFinding] | None = None,
 ) -> list[CheckResult]:
     """Audit the labelled tables (Table 1, Table 2, Table 3 …) individually."""
     checks: list[CheckResult] = []
+    pictures = pictures or []
 
     # --- Every labelled table is located --------------------------------------
     located = {}
     for number, info in table_labels.items():
         matching = [t for t in tables if t.detected_label == f"Table {number}"]
-        located[number] = {
-            "page_no": info.get("page_no"),
+        caption_page = info.get("page_no")
+        entry: dict[str, Any] = {
+            "page_no": caption_page,
             "title": info.get("title"),
             "evidence_source": info.get("source"),
             "docling_regions": len(matching),
+            "region_pages": [t.page_no for t in matching],
             "serialization": [t.serialization for t in matching],
             "cells_recovered": sum(t.num_cells for t in matching),
+            "assets": [
+                n.split(": ", 1)[1]
+                for t in matching
+                for n in t.notes
+                if n.startswith("Region preserved as asset: ")
+            ],
         }
+        if not matching:
+            # Docling may classify a raster table as a *picture* rather than a
+            # table. The content is then still preserved, just under a different
+            # label — record that instead of leaving the table unaccounted for.
+            covering = [
+                p
+                for p in pictures
+                if p.classification == "substantive"
+                and p.asset_path
+                and p.page_no in {caption_page, (caption_page or 0) + 1}
+            ]
+            entry["covered_by_picture_regions"] = [
+                {"page_no": p.page_no, "asset_path": p.asset_path, "area_fraction": p.area_fraction}
+                for p in covering
+            ]
+            entry["outcome"] = (
+                "No Docling TABLE region. The body is preserved as a figure asset on page "
+                f"{covering[0].page_no}; its cells are not machine-readable."
+                if covering
+                else "No Docling table or picture region found for this label — requires manual review."
+            )
+        else:
+            entry["outcome"] = (
+                f"Docling table region on page {matching[0].page_no}, serialized as "
+                f"'{matching[0].serialization}' with {entry['cells_recovered']} cell(s)."
+            )
+        located[number] = entry
+
     unlocated = [n for n, v in located.items() if v["docling_regions"] == 0]
+    # A label is only truly unaccounted for when nothing at all covers it.
+    unaccounted = [n for n in unlocated if not located[n].get("covered_by_picture_regions")]
     checks.append(
         CheckResult(
             check_id="labelled_tables_located",
             title="Every labelled table is located and individually reported",
-            passed=bool(located),
-            severity=Severity.CRITICAL if not located else Severity.WARNING,
+            passed=bool(located) and not unaccounted,
+            severity=Severity.CRITICAL,
             gate=True,
             summary=(
-                f"Located {len(located)} labelled table(s): "
-                + ", ".join(f"Table {n} (p{v['page_no']})" for n, v in sorted(located.items()))
-                + (f". No Docling table region for: {[f'Table {n}' for n in unlocated]}" if unlocated else "")
+                f"Located {len(located)} labelled table(s) from native PDF text: "
+                + ", ".join(f"Table {n} (caption p{v['page_no']})" for n, v in sorted(located.items()))
+                + (
+                    f". Detected as a picture region rather than a table: "
+                    f"{[f'Table {n}' for n in unlocated if n not in unaccounted]}"
+                    if [n for n in unlocated if n not in unaccounted]
+                    else ""
+                )
+                + (f". UNACCOUNTED: {[f'Table {n}' for n in unaccounted]}" if unaccounted else "")
             ),
             evidence={"tables": located},
             threshold={
-                "rule": "each 'Table N:' caption found in the source is reported with page and outcome"
+                "rule": "each 'Table N:' caption found in the source is reported with page, title and "
+                "the outcome of its region — whether Docling classified it as a table or a picture"
             },
-            remediation="A labelled table with no Docling region has its body preserved as a page/figure "
-            "asset only; its cells are not machine-readable.",
+            remediation="A labelled table with no Docling table region has its body preserved as a "
+            "figure asset; its cells are not machine-readable and need transcription.",
         )
     )
 

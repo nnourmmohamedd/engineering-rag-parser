@@ -19,12 +19,16 @@ SHA-256 `01e4d6fa…3b1a`.
 
 | Result | Detail |
 |---|---|
-| **Status** | `PASS_WITH_WARNINGS` — see [`docs/FINAL_IMPLEMENTATION_REPORT.md`](docs/FINAL_IMPLEMENTATION_REPORT.md) |
-| Pages parsed | 27 / 27, all with provenance |
-| Text recovered | 35,413 chars vs 36,338 native (headers/footers removed by design) |
-| Figures | 15 substantive diagrams preserved as PNG assets; 54 decorative banner/watermark instances excluded from the body |
+| **Status** | `PASS_WITH_WARNINGS` — **19/19 acceptance gates passed**, 4 warnings |
+| Pages parsed | **27 / 27**, all with provenance |
+| Text completeness | **100%** document-level critical-token recall and word-type recall vs an independent baseline; 32,637 → 32,506 chars (99.6%) after like-for-like furniture stripping |
+| Figures | **15** substantive diagrams preserved as PNG assets; 54 decorative banner/watermark instances excluded from the body |
 | **Tables 1, 2, 3** | **Located on pages 16, 25→26 and 23. All three bodies are raster images with no text layer — Docling recovered 0 cells. Contents are NOT machine-readable and are flagged for human transcription.** |
-| Visual review | 15 pages given side-by-side review cards under `validation/review/` |
+| Visual review | **17** side-by-side review cards under `validation/review/` |
+| Determinism | Re-runs are **byte-identical** for every deliverable (timestamps excluded) |
+| Tests | **201 passing** (168 fast + 33 full-document acceptance) |
+
+Full measured results: [`docs/FINAL_IMPLEMENTATION_REPORT.md`](docs/FINAL_IMPLEMENTATION_REPORT.md).
 
 The single most important finding is the table one, and it is the reason this package exists in this
 shape: a parser that silently emitted the captions and dropped the table bodies would have looked
@@ -255,13 +259,23 @@ with a flagged unrecovered table is a more honest and more useful result than a 
 ## Tests, lint, types
 
 ```bash
-pytest -m "not slow"                 # unit + integration (fast)
-pytest -m slow                       # full acceptance run against the real PDF (~3 min)
+pytest -m "not slow"                 # 168 tests: unit + integration + hygiene (~1 min)
+pytest -m slow                       # 33 tests: full acceptance run on the real PDF (~3 min)
 pytest --cov=engineering_rag_parser  # with coverage
 
-ruff check .
-ruff format --check .
-mypy src
+ruff check .                         # lint
+ruff format --check .                # formatting
+mypy src                             # types (17 modules, strict-ish)
+```
+
+Verified results on the reference environment:
+
+```text
+ruff check .            All checks passed!
+ruff format --check .   40 files already formatted
+mypy src                Success: no issues found in 17 source files
+pytest -m "not slow"    168 passed, 33 deselected
+pytest -m slow          33 passed, 168 deselected
 ```
 
 The slow acceptance test skips itself with an explicit reason when the PDF is absent, so a fresh
@@ -325,4 +339,16 @@ UTF-8 with LF regardless.
 | [`docs/validation_methodology.md`](docs/validation_methodology.md) | What each check proves and, importantly, what it does not |
 | [`docs/productionization_options.md`](docs/productionization_options.md) | Four deployment options compared; choice justified; ingestion contract |
 | [`docs/limitations.md`](docs/limitations.md) | Honest residual limitations |
-| [`TASKS.md`](TASKS.md) | Work log, ADRs, findings, risks |
+| [`TASKS.md`](TASKS.md) | Work log, ADRs, the 12 defects found by running against the real document, risks |
+
+Reproduce the determinism check between two runs:
+
+```bash
+python docs/_generated/determinism_check.py artifacts/<stem>/<run-a> artifacts/<stem>/<run-b>
+```
+
+Regenerate the Docling parameter guide after an upgrade:
+
+```bash
+python docs/_generated/gen_param_guide.py
+```

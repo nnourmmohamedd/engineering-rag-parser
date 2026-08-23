@@ -172,7 +172,14 @@ def run_pipeline(
     checks.append(document_completeness_check(manifest, native_texts, parsed_texts, effective_config))
     checks += structure_checks(document, inventory, manifest, picture_findings)
     markdown_text = export.markdown_path.read_text(encoding="utf-8")
-    checks += table_checks(export.table_findings, table_labels, effective_config, markdown_text, run.root)
+    checks += table_checks(
+        export.table_findings,
+        table_labels,
+        effective_config,
+        markdown_text,
+        run.root,
+        picture_findings,
+    )
     checks += visual_checks(manifest, reviews)
     checks += markdown_checks(export.markdown_path, run.root, inventory)
     checks += json_checks(json_path, reload_ok, reload_error, roundtrip)

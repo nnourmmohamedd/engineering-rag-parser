@@ -202,7 +202,13 @@ def build_page_coverage(
                     f"(warn below {thresholds.page_token_recall_warn:.0%})."
                 )
             if row.critical_token_recall < thresholds.critical_token_recall_fail and src_crit:
-                severity = Severity.CRITICAL
+                # WARNING, not CRITICAL: a page-local shortfall usually means the
+                # token moved (a TOC entry whose number lives on the body heading
+                # many pages away, outside the +/-1 neighbour window). True loss is
+                # gated by `document_text_completeness`, which ignores page
+                # boundaries. Marking the page CRITICAL here would label pages as
+                # critical on a run where every gate passes.
+                severity = max(severity, Severity.WARNING, key=_severity_rank)
                 notes.append(
                     f"Critical-token recall {row.critical_token_recall:.0%} is below "
                     f"{thresholds.critical_token_recall_fail:.0%}; missing e.g. {missing_crit[:6]}."

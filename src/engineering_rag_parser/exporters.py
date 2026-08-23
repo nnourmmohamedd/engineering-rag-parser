@@ -358,6 +358,15 @@ def _audit_tables(
     page_to_label = {
         info["page_no"]: (num, info) for num, info in table_labels.items() if info.get("page_no")
     }
+    # A caption near the foot of one page whose table body starts on the next is
+    # a standard layout; without this the body region is reported as an anonymous
+    # "table region N" even though the document names it.
+    pages_with_own_region = {_page_no(t) for t in document.tables}
+    previous_page_label = {
+        page + 1: entry
+        for page, entry in page_to_label.items()
+        if page + 1 in pages_with_own_region and page not in pages_with_own_region
+    }
 
     for index, table in enumerate(document.tables):
         data = table.data
@@ -375,8 +384,16 @@ def _audit_tables(
             m = _TABLE_LABEL_RE.match(caption.strip())
             if m:
                 detected_label = f"Table {int(m.group(1))}"
+        label_note: str | None = None
         if detected_label is None and page_no in page_to_label:
             detected_label = f"Table {page_to_label[page_no][0]}"
+        elif detected_label is None and page_no in previous_page_label:
+            number, info = previous_page_label[page_no]
+            detected_label = f"Table {number}"
+            label_note = (
+                f"Associated with the '{detected_label}' caption on page {info['page_no']}: the caption "
+                f"sits at the foot of that page and the table body begins on page {page_no}."
+            )
 
         empty_cells = sum(1 for c in cells if not (getattr(c, "text", "") or "").strip())
         empty_ratio = (empty_cells / len(cells)) if cells else 1.0
@@ -398,6 +415,8 @@ def _audit_tables(
             is_rectangular=is_rect,
             has_merged_cells=has_merged,
         )
+        if label_note:
+            finding.notes.append(label_note)
 
         if not cells:
             # No cells recovered. The region is real (the layout model found it)
