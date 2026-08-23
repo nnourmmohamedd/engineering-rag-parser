@@ -116,9 +116,16 @@ class TestEndToEndOnSyntheticPdf:
 
     def test_canonical_artifacts_exist(self, run_result) -> None:
         result, _ = run_result
-        for rel in ("run_manifest.json", "source/manifest.json", "docling/document.json",
-                    "markdown/document.md", "validation/report.json", "validation/report.md",
-                    "validation/pages.csv", "logs/run.jsonl"):
+        for rel in (
+            "run_manifest.json",
+            "source/manifest.json",
+            "docling/document.json",
+            "markdown/document.md",
+            "validation/report.json",
+            "validation/report.md",
+            "validation/pages.csv",
+            "logs/run.jsonl",
+        ):
             assert (result.run_dir / rel).is_file(), f"missing artifact: {rel}"
 
     def test_json_reloads_into_docling_model(self, run_result) -> None:
@@ -151,8 +158,19 @@ class TestEndToEndOnSyntheticPdf:
     def test_run_manifest_is_complete(self, run_result) -> None:
         result, _ = run_result
         manifest = json.loads((result.run_dir / "run_manifest.json").read_text(encoding="utf-8"))
-        for key in ("run_id", "parser_version", "config_hash", "effective_config", "profile",
-                    "profile_reason", "docling", "environment", "timings_s", "artifacts", "status"):
+        for key in (
+            "run_id",
+            "parser_version",
+            "config_hash",
+            "effective_config",
+            "profile",
+            "profile_reason",
+            "docling",
+            "environment",
+            "timings_s",
+            "artifacts",
+            "status",
+        ):
             assert key in manifest, f"run manifest missing {key}"
         assert manifest["source"]["page_count"] == 3
         assert len(manifest["artifacts"]) > 5

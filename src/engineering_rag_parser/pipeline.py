@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifacts import JsonlLogger, RunDirectory, build_run_manifest
-from .config import ParserConfig, Profile
+from .config import ParserConfig
 from .domain import RunStatus, SourceManifest, ValidationReport
 from .exporters import classify_pictures, export_assets, export_markdown, find_table_labels
 from .parser import (
@@ -86,12 +86,21 @@ def run_pipeline(
     # --- 3. Immutable run directory ------------------------------------------
     run = RunDirectory.create(Path(artifacts_base), pdf_path.stem, manifest.sha256)
     jlog = JsonlLogger(run.path_for("logs/run.jsonl"))
-    jlog.log("run_started", source=pdf_path.name, sha256=manifest.sha256,
-             profile=decision.profile.value, config_hash=effective_config.config_hash())
+    jlog.log(
+        "run_started",
+        source=pdf_path.name,
+        sha256=manifest.sha256,
+        profile=decision.profile.value,
+        config_hash=effective_config.config_hash(),
+    )
     run.write_json("source/manifest.json", manifest.model_dump(mode="json"))
-    jlog.log("preflight_complete", pages=manifest.page_count, chars=manifest.total_char_count,
-             substantive_images=manifest.substantive_image_count,
-             visual_review_pages=manifest.visual_review_pages)
+    jlog.log(
+        "preflight_complete",
+        pages=manifest.page_count,
+        chars=manifest.total_char_count,
+        substantive_images=manifest.substantive_image_count,
+        visual_review_pages=manifest.visual_review_pages,
+    )
 
     # --- 4. Conversion --------------------------------------------------------
     started = time.perf_counter()
@@ -102,8 +111,13 @@ def run_pipeline(
         logger.error("Conversion failed: %s", exc)
         raise
     timings["conversion_s"] = time.perf_counter() - started
-    jlog.log("conversion_complete", status=outcome.status, pages=outcome.page_count,
-             wall_time_s=outcome.wall_time_s, errors=len(outcome.errors))
+    jlog.log(
+        "conversion_complete",
+        status=outcome.status,
+        pages=outcome.page_count,
+        wall_time_s=outcome.wall_time_s,
+        errors=len(outcome.errors),
+    )
 
     if outcome.is_partial:
         warnings.append(
@@ -128,8 +142,7 @@ def run_pipeline(
 
     native_texts = native_page_texts(pdf_path, config)
     table_labels = find_table_labels(document, native_texts)
-    logger.info("Labelled tables located: %s",
-                {n: f"page {v['page_no']}" for n, v in table_labels.items()})
+    logger.info("Labelled tables located: %s", {n: f"page {v['page_no']}" for n, v in table_labels.items()})
 
     export = export_markdown(
         document, run, effective_config, manifest, picture_findings, page_images, table_labels
@@ -157,27 +170,34 @@ def run_pipeline(
     checks = []
     checks += coverage_checks(coverage_rows, manifest, effective_config)
     checks.append(document_completeness_check(manifest, native_texts, parsed_texts, effective_config))
-    checks += structure_checks(document, inventory, manifest, picture_findings, effective_config)
-    markdown_text = export.markdown_path.read_text(encoding='utf-8')
-    checks += table_checks(
-        export.table_findings, table_labels, effective_config, markdown_text, run.root
-    )
-    checks += visual_checks(manifest, coverage_rows, reviews)
+    checks += structure_checks(document, inventory, manifest, picture_findings)
+    markdown_text = export.markdown_path.read_text(encoding="utf-8")
+    checks += table_checks(export.table_findings, table_labels, effective_config, markdown_text, run.root)
+    checks += visual_checks(manifest, reviews)
     checks += markdown_checks(export.markdown_path, run.root, inventory)
     checks += json_checks(json_path, reload_ok, reload_error, roundtrip)
     checks += _integrity_checks(pdf_path, manifest, outcome)
 
     report = build_report(
-        checks, coverage_rows, export.table_findings, picture_findings,
-        manifest, inventory, export.removed_furniture, effective_config,
+        checks,
+        coverage_rows,
+        export.table_findings,
+        picture_findings,
+        manifest,
+        inventory,
+        export.removed_furniture,
+        effective_config,
     )
     run.write_json("validation/report.json", report.model_dump(mode="json"))
-    run.write_text("validation/report.md", render_markdown_report(report, manifest, effective_config))
+    run.write_text("validation/report.md", render_markdown_report(report, manifest))
     write_pages_csv(run, coverage_rows, manifest)
     timings["validation_s"] = time.perf_counter() - started
-    jlog.log("validation_complete", status=report.status.value,
-             failed_gates=[c.check_id for c in report.failed_gates],
-             warnings=[c.check_id for c in report.warnings])
+    jlog.log(
+        "validation_complete",
+        status=report.status.value,
+        failed_gates=[c.check_id for c in report.failed_gates],
+        warnings=[c.check_id for c in report.warnings],
+    )
 
     # --- 8. Run manifest ------------------------------------------------------
     docling_info = describe_effective_options(effective_config)
@@ -213,8 +233,9 @@ def run_pipeline(
     jlog.log("run_finished", status=report.status.value, run_dir=run.root.name)
 
     logger.info("Run complete: %s → %s", report.status.value, run.root)
-    return RunResult(run_dir=run.root, status=report.status, report=report,
-                     manifest=manifest, timings=timings)
+    return RunResult(
+        run_dir=run.root, status=report.status, report=report, manifest=manifest, timings=timings
+    )
 
 
 def _verify_roundtrip(json_path: Path, inventory: Any) -> tuple[bool, str | None, dict[str, Any]]:
@@ -222,13 +243,24 @@ def _verify_roundtrip(json_path: Path, inventory: Any) -> tuple[bool, str | None
     try:
         reloaded = reload_document_json(json_path)
     except Exception as exc:  # noqa: BLE001
-        return False, f"{type(exc).__name__}: {exc}", {
-            "identical": False, "summary": "Reload failed; round-trip not comparable."
-        }
+        return (
+            False,
+            f"{type(exc).__name__}: {exc}",
+            {"identical": False, "summary": "Reload failed; round-trip not comparable."},
+        )
 
     reloaded_inv = build_inventory(reloaded)
-    fields = ("page_count", "section_headers", "paragraphs", "list_items", "tables",
-              "pictures", "captions", "items_total", "total_char_count")
+    fields = (
+        "page_count",
+        "section_headers",
+        "paragraphs",
+        "list_items",
+        "tables",
+        "pictures",
+        "captions",
+        "items_total",
+        "total_char_count",
+    )
     diffs = {
         f: {"before": getattr(inventory, f), "after": getattr(reloaded_inv, f)}
         for f in fields
@@ -240,8 +272,11 @@ def _verify_roundtrip(json_path: Path, inventory: Any) -> tuple[bool, str | None
         if identical
         else f"{len(diffs)} field(s) differ after round-trip: {sorted(diffs)}"
     )
-    return True, None, {"identical": identical, "summary": summary, "differences": diffs,
-                        "compared_fields": list(fields)}
+    return (
+        True,
+        None,
+        {"identical": identical, "summary": summary, "differences": diffs, "compared_fields": list(fields)},
+    )
 
 
 def _integrity_checks(pdf_path: Path, manifest: SourceManifest, outcome: Any) -> list:
@@ -250,7 +285,7 @@ def _integrity_checks(pdf_path: Path, manifest: SourceManifest, outcome: Any) ->
     from .domain import CheckResult, Severity
 
     current = sha256_file(pdf_path)
-    checks = [
+    return [
         CheckResult(
             check_id="source_unmodified",
             title="Source PDF is unchanged by the run",
@@ -260,8 +295,11 @@ def _integrity_checks(pdf_path: Path, manifest: SourceManifest, outcome: Any) ->
             summary="Source SHA-256 is unchanged after parsing."
             if current == manifest.sha256
             else f"Source hash changed: {manifest.sha256} → {current}",
-            evidence={"sha256_before": manifest.sha256, "sha256_after": current,
-                      "byte_size": manifest.byte_size},
+            evidence={
+                "sha256_before": manifest.sha256,
+                "sha256_after": current,
+                "byte_size": manifest.byte_size,
+            },
             threshold={"required": "identical SHA-256"},
             remediation="The parser must never modify its input.",
         ),
@@ -273,10 +311,13 @@ def _integrity_checks(pdf_path: Path, manifest: SourceManifest, outcome: Any) ->
             gate=True,
             summary=f"Conversion status: {outcome.status}"
             + (f" with {len(outcome.errors)} error item(s)" if outcome.errors else ""),
-            evidence={"status": outcome.status, "is_partial": outcome.is_partial,
-                      "errors": outcome.errors[:5], "wall_time_s": outcome.wall_time_s,
-                      "confidence": {k: v for k, v in (outcome.confidence or {}).items()
-                                     if k != "pages"}},
+            evidence={
+                "status": outcome.status,
+                "is_partial": outcome.is_partial,
+                "errors": outcome.errors[:5],
+                "wall_time_s": outcome.wall_time_s,
+                "confidence": {k: v for k, v in (outcome.confidence or {}).items() if k != "pages"},
+            },
             threshold={"required": "ConversionStatus.SUCCESS"},
             remediation="Partial conversions must be quarantined, not published.",
         ),
@@ -292,4 +333,3 @@ def _integrity_checks(pdf_path: Path, manifest: SourceManifest, outcome: Any) ->
             remediation="A page-count mismatch means pages were dropped during assembly.",
         ),
     ]
-    return checks

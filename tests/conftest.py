@@ -130,9 +130,7 @@ def structured_pdf(fixtures_dir: Path) -> Path:
         Paragraph("Figure 1: Loop diagram", styles["BodyText"]),
     ]
 
-    SimpleDocTemplate(str(path), pagesize=A4).build(
-        story, onFirstPage=furniture, onLaterPages=furniture
-    )
+    SimpleDocTemplate(str(path), pagesize=A4).build(story, onFirstPage=furniture, onLaterPages=furniture)
     return path
 
 

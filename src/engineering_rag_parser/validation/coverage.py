@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import logging
 
-from ..config import ParserConfig
-from ..domain import CheckResult, PageCoverage, Severity, SourceManifest
-from ..normalization import (
+from engineering_rag_parser.config import ParserConfig
+from engineering_rag_parser.domain import CheckResult, PageCoverage, Severity, SourceManifest
+from engineering_rag_parser.normalization import (
     char_coverage,
     critical_tokens,
     find_duplicated_spans,
@@ -120,6 +120,12 @@ def build_page_coverage(
         relocated_crit = sorted(absent_here & neighbour_crit)
         missing_crit = sorted(absent_here - neighbour_crit)
 
+        # Computed once: spans absent from this page, and the subset still absent
+        # once neighbouring pages are considered. The difference is relocation.
+        absent_from_page = find_missing_spans(native, parsed)
+        truly_missing = find_missing_spans(native, parsed + "\n" + neighbours)
+        truly_missing_set = set(truly_missing)
+
         row = PageCoverage(
             page_no=page_no,
             source_chars=len(native_norm),
@@ -135,13 +141,12 @@ def build_page_coverage(
             missing_critical_tokens=missing_crit[:25],
             relocated_critical_tokens=relocated_crit[:25],
             missing_spans=[
-                redact(s, config.text_sample_chars, config.redact_text_samples)
-                for s in find_missing_spans(native, parsed + "\n" + neighbours)
+                redact(s, config.text_sample_chars, config.redact_text_samples) for s in truly_missing
             ],
             relocated_spans=[
                 redact(s, config.text_sample_chars, config.redact_text_samples)
-                for s in find_missing_spans(native, parsed)
-                if s not in {m for m in find_missing_spans(native, parsed + "\n" + neighbours)}
+                for s in absent_from_page
+                if s not in truly_missing_set
             ],
             duplicated_spans=[
                 redact(s, config.text_sample_chars, config.redact_text_samples)
@@ -300,8 +305,11 @@ def coverage_checks(
                 if not missing
                 else f"Missing pages: {missing}"
             ),
-            evidence={"source_page_count": manifest.page_count, "parsed_page_count": len(parsed_pages),
-                      "missing_pages": missing},
+            evidence={
+                "source_page_count": manifest.page_count,
+                "parsed_page_count": len(parsed_pages),
+                "missing_pages": missing,
+            },
             threshold={"required": "all source pages"},
             remediation="Investigate the conversion log for page-level failures and re-run.",
         )
@@ -362,9 +370,12 @@ def coverage_checks(
             else f"{len(crit_fail)} page(s) below critical-token threshold: {[p.page_no for p in crit_fail]}",
             evidence={
                 "pages": [
-                    {"page_no": p.page_no, "recall": p.critical_token_recall,
-                     "missing_sample": p.missing_critical_tokens[:10],
-                     "relocated_sample": p.relocated_critical_tokens[:10]}
+                    {
+                        "page_no": p.page_no,
+                        "recall": p.critical_token_recall,
+                        "missing_sample": p.missing_critical_tokens[:10],
+                        "relocated_sample": p.relocated_critical_tokens[:10],
+                    }
                     for p in crit_fail
                 ]
             },
@@ -388,16 +399,22 @@ def coverage_checks(
             + (f" Below threshold: {[p.page_no for p in low]}" if low else ""),
             evidence={
                 "pages": [
-                    {"page_no": p.page_no, "char_coverage": p.char_coverage,
-                     "token_recall": p.token_recall, "source_chars": p.source_chars}
+                    {
+                        "page_no": p.page_no,
+                        "char_coverage": p.char_coverage,
+                        "token_recall": p.token_recall,
+                        "source_chars": p.source_chars,
+                    }
                     for p in low
                 ],
                 "excluded_sparse_pages": [
                     p.page_no for p in pages if p.source_chars < thresholds.sparse_text_char_threshold
                 ],
             },
-            threshold={"page_char_coverage_warn": thresholds.page_char_coverage_warn,
-                       "applies_when_source_chars_gte": thresholds.sparse_text_char_threshold},
+            threshold={
+                "page_char_coverage_warn": thresholds.page_char_coverage_warn,
+                "applies_when_source_chars_gte": thresholds.sparse_text_char_threshold,
+            },
             remediation="Compare the page image with the Markdown; header/footer removal explains small "
             "deficits, a missing paragraph does not.",
         )

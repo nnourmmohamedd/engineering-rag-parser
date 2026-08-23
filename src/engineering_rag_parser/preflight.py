@@ -28,7 +28,7 @@ from typing import Any
 
 import pypdfium2 as pdfium
 from pdfminer.high_level import extract_pages
-from pdfminer.layout import LAParams, LTChar, LTTextContainer, LTTextLine
+from pdfminer.layout import LAParams, LTTextContainer, LTTextLine
 
 from .config import ParserConfig
 from .domain import FurnitureCandidate, ImageBlock, SourceManifest, SourcePage
@@ -140,7 +140,9 @@ def _collect_pypdf_facts(path: Path, config: ParserConfig) -> dict[str, Any]:
     facts["page_count"] = len(reader.pages)
 
     try:
-        meta = reader.metadata or {}
+        # Materialise as a plain dict: pypdf returns DocumentInformation | None,
+        # and the `or {}` fallback leaves the element types unresolvable.
+        meta: dict[Any, Any] = dict(reader.metadata or {})
         facts["metadata"] = {
             str(k).lstrip("/"): redact(str(v), 300, config.redact_text_samples)
             for k, v in meta.items()
@@ -368,16 +370,25 @@ def inspect_source(path: Path | str, config: ParserConfig) -> SourceManifest:
                     bbox = (float(bounds[0]), float(bounds[1]), float(bounds[2]), float(bounds[3]))
                     frac = abs((bbox[2] - bbox[0]) * (bbox[3] - bbox[1])) / area
                     sig = (
-                        round(bbox[0]), round(bbox[1]), round(bbox[2]), round(bbox[3]),
-                        int(px_w), int(px_h),
+                        round(bbox[0]),
+                        round(bbox[1]),
+                        round(bbox[2]),
+                        round(bbox[3]),
+                        int(px_w),
+                        int(px_h),
                     )
                     image_signatures[sig] += 1
-                    rows.append((sig, ImageBlock(
-                        width_px=int(px_w) or None,
-                        height_px=int(px_h) or None,
-                        bbox=bbox,
-                        area_fraction=round(frac, 5),
-                    )))
+                    rows.append(
+                        (
+                            sig,
+                            ImageBlock(
+                                width_px=int(px_w) or None,
+                                height_px=int(px_h) or None,
+                                bbox=bbox,
+                                area_fraction=round(frac, 5),
+                            ),
+                        )
+                    )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Image object inspection failed on page %d: %s", page_no, exc)
             page_image_rows[page_no] = rows
@@ -440,8 +451,9 @@ def inspect_source(path: Path | str, config: ParserConfig) -> SourceManifest:
                 FurnitureCandidate(
                     text=f"[image {sig[4]}x{sig[5]}px at bbox {sig[:4]}]",
                     normalized=f"image:{sig}",
-                    pages=sorted(p for p in range(1, total_pages + 1)
-                                 if any(s == sig for s, _ in page_image_rows[p])),
+                    pages=sorted(
+                        p for p in range(1, total_pages + 1) if any(s == sig for s, _ in page_image_rows[p])
+                    ),
                     page_fraction=round(count / total_pages, 4),
                     band="header" if sig[1] > 600 else "body",
                     kind="watermark" if sig[4] == sig[5] else "other",
@@ -479,8 +491,11 @@ def inspect_source(path: Path | str, config: ParserConfig) -> SourceManifest:
     )
     logger.info(
         "Preflight complete: %d pages, %d chars, %d images (%d sparse, %d image-heavy)",
-        manifest.page_count, manifest.total_char_count, manifest.total_image_count,
-        len(manifest.sparse_pages), len(manifest.image_heavy_pages),
+        manifest.page_count,
+        manifest.total_char_count,
+        manifest.total_image_count,
+        len(manifest.sparse_pages),
+        len(manifest.image_heavy_pages),
     )
     return manifest
 

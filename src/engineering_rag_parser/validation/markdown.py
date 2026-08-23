@@ -15,7 +15,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from ..domain import CheckResult, DocumentInventory, Severity
+from engineering_rag_parser.domain import CheckResult, DocumentInventory, Severity
 
 __all__ = ["json_checks", "markdown_checks"]
 
@@ -34,9 +34,7 @@ _MOJIBAKE_RE = re.compile(r"(Ã[\x80-\xbf])|(â€[\x9c\x9d\x99\x93\x94])|(Â[\x
 _PLACEHOLDER_RE = re.compile(r"(?:TODO|FIXME|XXX|<unresolved>|\{\{[^}]*\}\}|@@[A-Z_]+@@|<!--ERP:)")
 
 
-def markdown_checks(
-    markdown_path: Path, run_root: Path, inventory: DocumentInventory
-) -> list[CheckResult]:
+def markdown_checks(markdown_path: Path, run_root: Path, inventory: DocumentInventory) -> list[CheckResult]:
     """Validate the canonical Markdown artifact on disk."""
     checks: list[CheckResult] = []
     raw_bytes = markdown_path.read_bytes()
@@ -133,7 +131,9 @@ def markdown_checks(
             passed=not abs_hits,
             severity=Severity.WARNING,
             gate=False,
-            summary="No absolute paths." if not abs_hits else f"{len(abs_hits)} absolute-path-like string(s).",
+            summary="No absolute paths."
+            if not abs_hits
+            else f"{len(abs_hits)} absolute-path-like string(s).",
             evidence={"occurrences": len(abs_hits)},
             threshold={"required": "zero"},
             remediation="Absolute paths make the artifact non-portable and can leak directory structure.",
@@ -170,7 +170,9 @@ def markdown_checks(
             passed=not placeholders,
             severity=Severity.CRITICAL,
             gate=True,
-            summary="No leftover markers." if not placeholders else f"{len(placeholders)} placeholder(s) remain.",
+            summary="No leftover markers."
+            if not placeholders
+            else f"{len(placeholders)} placeholder(s) remain.",
             evidence={"samples": list(dict.fromkeys(placeholders))[:10]},
             threshold={"required": "zero"},
             remediation="An internal marker in the canonical output means a substitution step did not run.",
@@ -230,8 +232,11 @@ def markdown_checks(
             gate=False,
             summary=f"{md_headings} Markdown headings vs {expected_headings} in the DoclingDocument "
             f"({retention:.0%} retained).",
-            evidence={"markdown_headings": md_headings, "document_headings": expected_headings,
-                      "retention": round(retention, 4)},
+            evidence={
+                "markdown_headings": md_headings,
+                "document_headings": expected_headings,
+                "retention": round(retention, 4),
+            },
             threshold={"min_retention": 0.9},
             remediation="Loss here means the Markdown serializer dropped structure the JSON still has; "
             "downstream chunking should consume the JSON.",
@@ -268,8 +273,9 @@ def _check_block(block: list[str], start_line: int) -> list[dict[str, Any]]:
     return []
 
 
-def json_checks(json_path: Path, reload_ok: bool, reload_error: str | None,
-                roundtrip: dict[str, Any]) -> list[CheckResult]:
+def json_checks(
+    json_path: Path, reload_ok: bool, reload_error: str | None, roundtrip: dict[str, Any]
+) -> list[CheckResult]:
     """Validate the serialised DoclingDocument artifact."""
     checks: list[CheckResult] = []
 
@@ -288,8 +294,10 @@ def json_checks(json_path: Path, reload_ok: bool, reload_error: str | None,
             severity=Severity.CRITICAL,
             gate=True,
             summary="Parsed successfully." if parse_error is None else f"Parse failed: {parse_error}",
-            evidence={"bytes": json_path.stat().st_size if json_path.exists() else 0,
-                      "top_level_keys": sorted(payload)[:15] if isinstance(payload, dict) else None},
+            evidence={
+                "bytes": json_path.stat().st_size if json_path.exists() else 0,
+                "top_level_keys": sorted(payload)[:15] if isinstance(payload, dict) else None,
+            },
             threshold={"required": "valid JSON"},
             remediation="Re-run the export; a truncated file usually means the process was interrupted.",
         )

@@ -10,7 +10,6 @@ import pytest
 from engineering_rag_parser.config import ParserConfig
 from engineering_rag_parser.domain import (
     FurnitureCandidate,
-    ImageBlock,
     SourceManifest,
     SourcePage,
 )
@@ -80,8 +79,12 @@ def _manifest_with_furniture() -> SourceManifest:
         pages=[SourcePage(page_no=1, width_pt=596, height_pt=842, text_sha256="b" * 64)],
         furniture_candidates=[
             FurnitureCandidate(
-                text=footer, normalized=normalize_line(footer), pages=[1, 2, 3],
-                page_fraction=1.0, band="footer", kind="page_number",
+                text=footer,
+                normalized=normalize_line(footer),
+                pages=[1, 2, 3],
+                page_fraction=1.0,
+                band="footer",
+                kind="page_number",
             )
         ],
         generated_at_utc=datetime.now(timezone.utc),
@@ -91,18 +94,14 @@ def _manifest_with_furniture() -> SourceManifest:
 class TestFurnitureStripping:
     def test_removes_repeated_footer_lines(self) -> None:
         markdown = "Body one.\nwww.example.com    Page 7 of 27\nBody two.\n"
-        out, evidence = _strip_repeated_furniture_lines(
-            markdown, _manifest_with_furniture(), ParserConfig()
-        )
+        out, evidence = _strip_repeated_furniture_lines(markdown, _manifest_with_furniture(), ParserConfig())
         assert "Page 7 of 27" not in out
         assert "Body one." in out and "Body two." in out
         assert evidence and evidence[0]["occurrences"] == 1
 
     def test_records_evidence_for_every_removal(self) -> None:
         markdown = "\n".join(f"www.example.com    Page {i} of 27" for i in range(1, 4))
-        _out, evidence = _strip_repeated_furniture_lines(
-            markdown, _manifest_with_furniture(), ParserConfig()
-        )
+        _out, evidence = _strip_repeated_furniture_lines(markdown, _manifest_with_furniture(), ParserConfig())
         assert sum(e["occurrences"] for e in evidence) == 3
 
     def test_disabled_by_config(self) -> None:
@@ -178,9 +177,7 @@ class TestPreflightOnSyntheticPdf:
 
 
 class TestPreflightEdgeCases:
-    def test_image_only_page_is_flagged_for_review(
-        self, image_only_pdf: Path, config: ParserConfig
-    ) -> None:
+    def test_image_only_page_is_flagged_for_review(self, image_only_pdf: Path, config: ParserConfig) -> None:
         manifest = inspect_source(image_only_pdf, config)
         assert manifest.pages[0].is_sparse_text is True
         assert manifest.pages[0].needs_visual_review is True

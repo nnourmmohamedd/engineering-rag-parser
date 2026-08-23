@@ -27,13 +27,23 @@ from typing import Any
 
 from . import PARSER_VERSION
 
-__all__ = ["RunDirectory", "RunManifest", "UnsafePathError", "build_run_manifest", "safe_filename", "sha256_file"]
+__all__ = [
+    "RunDirectory",
+    "RunManifest",
+    "UnsafePathError",
+    "build_run_manifest",
+    "safe_filename",
+    "sha256_file",
+]
 
 logger = logging.getLogger(__name__)
 
 _UNSAFE_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 _RESERVED_WINDOWS = {
-    "CON", "PRN", "AUX", "NUL",
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
     *(f"COM{i}" for i in range(1, 10)),
     *(f"LPT{i}" for i in range(1, 10)),
 }
@@ -81,8 +91,14 @@ class RunDirectory:
 
     #: Subdirectories created eagerly so writers never race on mkdir.
     SUBDIRS = (
-        "source", "docling", "markdown", "assets/pictures", "assets/pages",
-        "validation", "validation/review", "logs",
+        "source",
+        "docling",
+        "markdown",
+        "assets/pictures",
+        "assets/pages",
+        "validation",
+        "validation/review",
+        "logs",
     )
 
     @classmethod

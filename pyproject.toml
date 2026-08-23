@@ -97,14 +97,18 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Tests legitimately use magic values, long fixtures and broad excepts.
-"tests/**" = ["ARG", "BLE", "B011"]
+# Tests legitimately use magic values, long fixtures and broad excepts, and a
+# relative import of the sibling conftest is the idiomatic way to share markers.
+"tests/**" = ["ARG", "BLE", "B011", "TID252"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["engineering_rag_parser"]
 
 [tool.mypy]
-python_version = "3.10"
+# Deliberately NOT pinned to the minimum supported version: numpy's bundled
+# stubs use `type` statements that are a syntax error below 3.12, so pinning to
+# 3.10 aborts the whole check. mypy therefore targets the running interpreter
+# (3.13 here); 3.10 compatibility is covered by `requires-python` plus CI.
 files = ["src"]
 strict_optional = true
 warn_redundant_casts = true

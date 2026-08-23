@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from engineering_rag_parser.artifacts import (
     JsonlLogger,
@@ -37,20 +38,20 @@ class TestParserConfig:
 
     def test_config_is_frozen(self) -> None:
         cfg = ParserConfig()
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             cfg.strict = True  # type: ignore[misc]
 
     def test_unknown_key_is_rejected(self) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ParserConfig.model_validate({"not_a_real_key": 1})
 
     def test_remote_services_cannot_be_enabled(self) -> None:
         """Local-only is a policy enforced by a validator, not merely a default."""
-        with pytest.raises(Exception, match="never leave the machine"):
+        with pytest.raises(ValidationError, match="never leave the machine"):
             ParserConfig.model_validate({"docling": {"enable_remote_services": True}})
 
     def test_threshold_ordering_is_validated(self) -> None:
-        with pytest.raises(Exception, match="page_char_coverage_fail"):
+        with pytest.raises(ValidationError, match="page_char_coverage_fail"):
             ParserConfig.model_validate(
                 {"thresholds": {"page_char_coverage_warn": 0.5, "page_char_coverage_fail": 0.9}}
             )

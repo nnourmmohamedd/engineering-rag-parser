@@ -84,8 +84,12 @@ class SourcePage(_Model):
     char_count: int = 0
     word_count: int = 0
     line_count: int = 0
-    text_sha256: str = Field(description="SHA-256 of the normalised page text; enables cheap change detection.")
-    text_sample: str = Field(default="", description="Short, redaction-limited excerpt for human orientation.")
+    text_sha256: str = Field(
+        description="SHA-256 of the normalised page text; enables cheap change detection."
+    )
+    text_sample: str = Field(
+        default="", description="Short, redaction-limited excerpt for human orientation."
+    )
     image_count: int = 0
     images: list[ImageBlock] = Field(default_factory=list)
     image_area_fraction: float = 0.0
@@ -150,9 +154,12 @@ class SourceManifest(_Model):
     substantive_image_count: int = 0
     decorative_image_count: int = 0
     source_anomalies: list[str] = Field(
-        default_factory=list, description="Structural oddities observed while reading the source (evidence, not errors)."
+        default_factory=list,
+        description="Structural oddities observed while reading the source (evidence, not errors).",
     )
-    tools: dict[str, str] = Field(default_factory=dict, description="Library name -> version used for this manifest.")
+    tools: dict[str, str] = Field(
+        default_factory=dict, description="Library name -> version used for this manifest."
+    )
     generated_at_utc: datetime
 
 
@@ -232,7 +239,9 @@ class PageCoverage(_Model):
     source_chars_with_furniture: int = 0
     char_coverage: float = Field(default=0.0, description="parsed_chars / source_chars, clipped to [0, 2].")
     token_jaccard: float = 0.0
-    token_recall: float = Field(default=0.0, description="Fraction of source word types present in parsed text.")
+    token_recall: float = Field(
+        default=0.0, description="Fraction of source word types present in parsed text."
+    )
     critical_token_recall: float = Field(
         default=1.0, description="Recall over numbers, units and ALL-CAPS acronyms only."
     )

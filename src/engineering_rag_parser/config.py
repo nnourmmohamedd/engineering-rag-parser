@@ -77,7 +77,9 @@ class LimitsOptions(_Frozen):
     document_timeout_s: float | None = Field(
         default=3600.0, gt=0, description="Wall-clock ceiling handed to Docling; None disables."
     )
-    max_render_pages: int = Field(default=200, gt=0, description="Upper bound on preflight page rasterisations.")
+    max_render_pages: int = Field(
+        default=200, gt=0, description="Upper bound on preflight page rasterisations."
+    )
 
 
 class PictureDescriptionOptions(_Frozen):
@@ -101,7 +103,10 @@ class PictureDescriptionOptions(_Frozen):
         )
     )
     picture_area_threshold: float = Field(
-        default=0.05, ge=0.0, le=1.0, description="Skip pictures covering less than this fraction of the page."
+        default=0.05,
+        ge=0.0,
+        le=1.0,
+        description="Skip pictures covering less than this fraction of the page.",
     )
     batch_size: int = Field(default=4, gt=0)
     require_gpu_vram_mb: int = Field(
@@ -189,7 +194,10 @@ class ExportOptions(_Frozen):
         description="Additionally drop body lines that preflight proved are repeated header/footer furniture.",
     )
     furniture_min_page_fraction: float = Field(
-        default=0.5, ge=0.0, le=1.0, description="A line must repeat on >= this fraction of pages to be furniture."
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="A line must repeat on >= this fraction of pages to be furniture.",
     )
     complex_table_as_html: bool = Field(
         default=True, description="Merged/ragged tables become HTML rather than a lossy Markdown flattening."
@@ -225,7 +233,10 @@ class ValidationThresholds(_Frozen):
     page_char_coverage_fail: float = Field(default=0.50, ge=0.0, le=1.0)
     page_token_jaccard_warn: float = Field(default=0.70, ge=0.0, le=1.0)
     page_token_recall_warn: float = Field(
-        default=0.85, ge=0.0, le=1.0, description="Fraction of native word types that must survive into Docling text."
+        default=0.85,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of native word types that must survive into Docling text.",
     )
     critical_token_recall_fail: float = Field(
         default=0.95,
@@ -252,7 +263,9 @@ class ParserConfig(_Frozen):
     limits: LimitsOptions = LimitsOptions()
     thresholds: ValidationThresholds = ValidationThresholds()
 
-    redact_text_samples: bool = Field(default=True, description="Truncate any source text echoed into logs/reports.")
+    redact_text_samples: bool = Field(
+        default=True, description="Truncate any source text echoed into logs/reports."
+    )
     text_sample_chars: int = Field(default=160, ge=0, le=2000)
     strict: bool = Field(default=False, description="Treat warnings as failures (CI gate).")
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
@@ -292,7 +305,9 @@ def load_config(path: Path | str | None = None, **overrides: Any) -> ParserConfi
             raise FileNotFoundError(f"Config file not found: {cfg_path}")
         loaded = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
         if not isinstance(loaded, dict):
-            raise ValueError(f"Config file must contain a YAML mapping, got {type(loaded).__name__}: {cfg_path}")
+            raise ValueError(
+                f"Config file must contain a YAML mapping, got {type(loaded).__name__}: {cfg_path}"
+            )
         data = loaded
     data.update({k: v for k, v in overrides.items() if v is not None})
     return ParserConfig.model_validate(data)

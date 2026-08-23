@@ -118,7 +118,9 @@ def docling_versions() -> dict[str, str]:
         import torch
 
         versions["torch_cuda_available"] = str(torch.cuda.is_available())
-        versions["torch_cuda_device_count"] = str(torch.cuda.device_count() if torch.cuda.is_available() else 0)
+        versions["torch_cuda_device_count"] = str(
+            torch.cuda.device_count() if torch.cuda.is_available() else 0
+        )
     except Exception:  # noqa: BLE001
         versions["torch_cuda_available"] = "unknown"
     return versions
@@ -331,8 +333,11 @@ def build_converter(config: ParserConfig) -> DocumentConverter:
     pipeline_options = build_pipeline_options(config)
     logger.info(
         "Docling converter: backend=%s do_ocr=%s table_mode=%s device=%s scale=%.1f",
-        config.docling.backend, config.docling.do_ocr, config.docling.table_mode,
-        config.docling.accelerator_device.value, config.docling.images_scale,
+        config.docling.backend,
+        config.docling.do_ocr,
+        config.docling.table_mode,
+        config.docling.accelerator_device.value,
+        config.docling.images_scale,
     )
     return DocumentConverter(
         allowed_formats=[InputFormat.PDF],

@@ -480,8 +480,10 @@ def _strip_repeated_furniture_lines(
             continue
         kept.append(line)
 
-    evidence = [{"text": text, "occurrences": n, "reason": "repeated header/footer furniture"}
-                for text, n in sorted(removed.items(), key=lambda kv: -kv[1])]
+    evidence = [
+        {"text": text, "occurrences": n, "reason": "repeated header/footer furniture"}
+        for text, n in sorted(removed.items(), key=lambda kv: -kv[1])
+    ]
     return "\n".join(kept), evidence
 
 
@@ -549,9 +551,9 @@ def export_markdown(
                 after=True,
             )
 
-    layers = {ContentLayer.BODY} if config.export.strip_furniture else {
-        ContentLayer.BODY, ContentLayer.FURNITURE
-    }
+    layers = (
+        {ContentLayer.BODY} if config.export.strip_furniture else {ContentLayer.BODY, ContentLayer.FURNITURE}
+    )
     raw_markdown = md_doc.export_to_markdown(
         image_mode=ImageRefMode.PLACEHOLDER,
         image_placeholder=_IMAGE_PLACEHOLDER,
@@ -632,7 +634,8 @@ def export_markdown(
             logger.warning(
                 "Page-break count (%d) does not match page count (%d); emitting Markdown without "
                 "page anchors rather than mislabelling provenance.",
-                len(segments), len(page_numbers),
+                len(segments),
+                len(page_numbers),
             )
         body = body.replace(_PAGE_BREAK, "\n\n")
 
@@ -641,8 +644,7 @@ def export_markdown(
     # --- Document title.
     synthesized_title: str | None = None
     has_title = any(
-        getattr(i, "label", None) == DocItemLabel.TITLE
-        for i, _l in document.iterate_items(with_groups=False)
+        getattr(i, "label", None) == DocItemLabel.TITLE for i, _l in document.iterate_items(with_groups=False)
     )
     if not has_title:
         # The visible title may live inside a banner image, so no text item carries

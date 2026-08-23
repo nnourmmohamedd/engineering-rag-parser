@@ -32,7 +32,13 @@ from .config import ParserConfig
 from .domain import DocumentInventory, PageInventory
 from .pipeline_factory import build_converter
 
-__all__ = ["ConversionOutcome", "ConversionFailedError", "build_inventory", "convert_pdf", "save_document_json"]
+__all__ = [
+    "ConversionOutcome",
+    "ConversionFailedError",
+    "build_inventory",
+    "convert_pdf",
+    "save_document_json",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -154,8 +160,12 @@ def convert_pdf(pdf_path: Path, config: ParserConfig) -> ConversionOutcome:
     )
     logger.info(
         "Conversion %s in %.1fs: %d pages, %d texts, %d tables, %d pictures",
-        outcome.status, wall, outcome.page_count,
-        len(document.texts), len(document.tables), len(document.pictures),
+        outcome.status,
+        wall,
+        outcome.page_count,
+        len(document.texts),
+        len(document.tables),
+        len(document.pictures),
     )
     return outcome
 
@@ -203,9 +213,7 @@ def build_inventory(document: DoclingDocument) -> DocumentInventory:
     evidence that the report has to show.
     """
     inv = DocumentInventory(page_count=len(document.pages))
-    pages: dict[int, PageInventory] = {
-        int(no): PageInventory(page_no=int(no)) for no in document.pages
-    }
+    pages: dict[int, PageInventory] = {int(no): PageInventory(page_no=int(no)) for no in document.pages}
     label_counts: Counter[str] = Counter()
     headings_by_level: Counter[str] = Counter()
 
@@ -300,9 +308,11 @@ def page_texts(document: DoclingDocument, *, body_only: bool = True) -> dict[int
     Table cell text is included: a table's contents are real page content, and
     excluding them would make every table page look like catastrophic text loss.
     """
-    layers = {ContentLayer.BODY} if body_only else {
-        ContentLayer.BODY, ContentLayer.FURNITURE, ContentLayer.BACKGROUND
-    }
+    layers = (
+        {ContentLayer.BODY}
+        if body_only
+        else {ContentLayer.BODY, ContentLayer.FURNITURE, ContentLayer.BACKGROUND}
+    )
     buckets: dict[int, list[str]] = {int(no): [] for no in document.pages}
 
     for item, _level in document.iterate_items(with_groups=False, included_content_layers=layers):

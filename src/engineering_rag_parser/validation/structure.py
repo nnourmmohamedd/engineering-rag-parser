@@ -14,8 +14,8 @@ from typing import Any
 
 from docling_core.types.doc import ContentLayer, DocItemLabel, DoclingDocument
 
-from ..config import ParserConfig
-from ..domain import (
+from engineering_rag_parser.config import ParserConfig
+from engineering_rag_parser.domain import (
     CheckResult,
     DocumentInventory,
     PictureFinding,
@@ -35,9 +35,7 @@ _SECTION_NUM_RE = re.compile(r"^\s*(?:Section\s+)?(\d+(?:\.\d+)*)\b", re.IGNOREC
 def _headings(document: DoclingDocument) -> list[tuple[int, str]]:
     """Ordered ``(level, text)`` for every heading in the body layer."""
     out: list[tuple[int, str]] = []
-    for item, _lvl in document.iterate_items(
-        with_groups=False, included_content_layers={ContentLayer.BODY}
-    ):
+    for item, _lvl in document.iterate_items(with_groups=False, included_content_layers={ContentLayer.BODY}):
         label = getattr(item, "label", None)
         if label == DocItemLabel.TITLE:
             out.append((1, (getattr(item, "text", "") or "").strip()))
@@ -52,7 +50,6 @@ def structure_checks(
     inventory: DocumentInventory,
     manifest: SourceManifest,
     pictures: list[PictureFinding],
-    config: ParserConfig,
 ) -> list[CheckResult]:
     """Run the structural inventory checks."""
     checks: list[CheckResult] = []
@@ -67,7 +64,10 @@ def structure_checks(
             severity=Severity.CRITICAL,
             gate=True,
             summary=f"{len(headings)} heading(s) recovered across {inventory.page_count} pages.",
-            evidence={"headings_by_level": inventory.headings_by_level, "sample": [h[1][:70] for h in headings[:8]]},
+            evidence={
+                "headings_by_level": inventory.headings_by_level,
+                "sample": [h[1][:70] for h in headings[:8]],
+            },
             threshold={"required": ">= 1 heading"},
             remediation="A document with no headings cannot be chunked section-wise downstream.",
         )
@@ -111,9 +111,7 @@ def structure_checks(
         if m:
             heading_numbers.add(m.group(1))
     missing_sections = sorted(outline_numbers - heading_numbers, key=_numeric_key)
-    coverage = (
-        len(outline_numbers & heading_numbers) / len(outline_numbers) if outline_numbers else 1.0
-    )
+    coverage = len(outline_numbers & heading_numbers) / len(outline_numbers) if outline_numbers else 1.0
     checks.append(
         CheckResult(
             check_id="toc_sections_recovered",
@@ -273,10 +271,12 @@ def table_checks(
             summary=(
                 f"Located {len(located)} labelled table(s): "
                 + ", ".join(f"Table {n} (p{v['page_no']})" for n, v in sorted(located.items()))
-                + (f". No Docling table region for: {['Table %d' % n for n in unlocated]}" if unlocated else "")
+                + (f". No Docling table region for: {[f'Table {n}' for n in unlocated]}" if unlocated else "")
             ),
             evidence={"tables": located},
-            threshold={"rule": "each 'Table N:' caption found in the source is reported with page and outcome"},
+            threshold={
+                "rule": "each 'Table N:' caption found in the source is reported with page and outcome"
+            },
             remediation="A labelled table with no Docling region has its body preserved as a page/figure "
             "asset only; its cells are not machine-readable.",
         )
@@ -304,8 +304,13 @@ def table_checks(
             ),
             evidence={
                 "unrecovered": [
-                    {"table_index": t.table_index, "page_no": t.page_no, "label": t.detected_label,
-                     "caption": t.caption[:120], "notes": t.notes}
+                    {
+                        "table_index": t.table_index,
+                        "page_no": t.page_no,
+                        "label": t.detected_label,
+                        "caption": t.caption[:120],
+                        "notes": t.notes,
+                    }
                     for t in unrecovered
                 ]
             },
@@ -324,17 +329,25 @@ def table_checks(
     for table in unrecovered:
         asset_note = next((n for n in table.notes if n.startswith("Region preserved as asset: ")), None)
         asset_rel = asset_note.split(": ", 1)[1] if asset_note else None
-        asset_exists = bool(asset_rel) and run_root is not None and (run_root / asset_rel).is_file()
+        # `is not None` (rather than a truthiness test) so the optional path is
+        # narrowed to `str` for the join and the substring search below.
+        asset_exists = asset_rel is not None and run_root is not None and (run_root / asset_rel).is_file()
         label = table.detected_label or f"table region {table.table_index}"
         flagged = ("Unrecovered table" in markdown_text) and (
             label in markdown_text or f"page {table.page_no}" in markdown_text
         )
-        linked = bool(asset_rel) and asset_rel in markdown_text
-        preservation.append({
-            "table_index": table.table_index, "page_no": table.page_no, "label": label,
-            "asset_path": asset_rel, "asset_exists": asset_exists,
-            "warning_in_markdown": flagged, "asset_linked_in_markdown": linked,
-        })
+        linked = asset_rel is not None and asset_rel in markdown_text
+        preservation.append(
+            {
+                "table_index": table.table_index,
+                "page_no": table.page_no,
+                "label": label,
+                "asset_path": asset_rel,
+                "asset_exists": asset_exists,
+                "warning_in_markdown": flagged,
+                "asset_linked_in_markdown": linked,
+            }
+        )
     unpreserved = [p for p in preservation if not (p["asset_exists"] and p["warning_in_markdown"])]
     checks.append(
         CheckResult(
@@ -353,8 +366,10 @@ def table_checks(
                 "this is silent loss."
             ),
             evidence={"regions": preservation},
-            threshold={"rule": "every zero-cell table region must have a written image asset AND a "
-                               "visible warning in the canonical Markdown"},
+            threshold={
+                "rule": "every zero-cell table region must have a written image asset AND a "
+                "visible warning in the canonical Markdown"
+            },
             remediation="Silent loss is the one unacceptable outcome; re-run the export so the region "
             "is written and marked.",
         )
@@ -362,8 +377,7 @@ def table_checks(
 
     # --- Empty cell ratio -----------------------------------------------------
     sparse = [
-        t for t in tables
-        if t.num_cells and t.empty_cell_ratio > config.thresholds.max_empty_table_cell_ratio
+        t for t in tables if t.num_cells and t.empty_cell_ratio > config.thresholds.max_empty_table_cell_ratio
     ]
     checks.append(
         CheckResult(
@@ -375,8 +389,16 @@ def table_checks(
             summary="All recovered tables have acceptable cell density."
             if not sparse
             else f"{len(sparse)} table(s) exceed the empty-cell ratio threshold.",
-            evidence={"tables": [{"table_index": t.table_index, "page_no": t.page_no,
-                                  "empty_cell_ratio": t.empty_cell_ratio} for t in sparse]},
+            evidence={
+                "tables": [
+                    {
+                        "table_index": t.table_index,
+                        "page_no": t.page_no,
+                        "empty_cell_ratio": t.empty_cell_ratio,
+                    }
+                    for t in sparse
+                ]
+            },
             threshold={"max_empty_table_cell_ratio": config.thresholds.max_empty_table_cell_ratio},
             remediation="A mostly-empty table usually means cell matching failed; try table_mode=accurate.",
         )

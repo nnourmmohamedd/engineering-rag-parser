@@ -76,10 +76,13 @@ def _main(
 
 @app.command("inspect")
 def inspect_cmd(
-    input_path: Annotated[Path, typer.Option("--input", "-i", help="PDF to inspect.",
-                                             exists=True, dir_okay=False, readable=True)],
-    config_path: Annotated[Path | None, typer.Option("--config", "-c", help="YAML config file.",
-                                                     exists=True, dir_okay=False)] = None,
+    input_path: Annotated[
+        Path,
+        typer.Option("--input", "-i", help="PDF to inspect.", exists=True, dir_okay=False, readable=True),
+    ],
+    config_path: Annotated[
+        Path | None, typer.Option("--config", "-c", help="YAML config file.", exists=True, dir_okay=False)
+    ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Emit the manifest as JSON on stdout.")] = False,
     log_level: Annotated[str, typer.Option("--log-level")] = "INFO",
 ) -> None:
@@ -133,15 +136,20 @@ def inspect_cmd(
 
 @app.command("run")
 def run_cmd(
-    input_path: Annotated[Path, typer.Option("--input", "-i", help="PDF to parse.",
-                                             exists=True, dir_okay=False, readable=True)],
-    config_path: Annotated[Path | None, typer.Option("--config", "-c", help="YAML config file.",
-                                                     exists=True, dir_okay=False)] = None,
-    artifacts: Annotated[Path, typer.Option("--artifacts", help="Base directory for run artifacts.")]
-    = Path("artifacts"),
+    input_path: Annotated[
+        Path, typer.Option("--input", "-i", help="PDF to parse.", exists=True, dir_okay=False, readable=True)
+    ],
+    config_path: Annotated[
+        Path | None, typer.Option("--config", "-c", help="YAML config file.", exists=True, dir_okay=False)
+    ] = None,
+    artifacts: Annotated[Path, typer.Option("--artifacts", help="Base directory for run artifacts.")] = Path(
+        "artifacts"
+    ),
     profile: Annotated[str | None, typer.Option("--profile", help="Override the config profile.")] = None,
     strict: Annotated[bool, typer.Option("--strict", help="Treat warnings as failures.")] = False,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit a machine-readable summary on stdout.")] = False,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Emit a machine-readable summary on stdout.")
+    ] = False,
     log_level: Annotated[str, typer.Option("--log-level")] = "INFO",
 ) -> None:
     """Parse, export and validate a PDF end to end. Exits non-zero on FAIL."""
@@ -158,15 +166,19 @@ def run_cmd(
         raise typer.Exit(3) from exc
 
     if as_json:
-        _stdout.print_json(json.dumps({
-            "status": result.status.value,
-            "run_dir": result.run_dir.as_posix(),
-            "exit_code": result.exit_code,
-            "failed_gates": [c.check_id for c in result.report.failed_gates],
-            "warnings": [c.check_id for c in result.report.warnings],
-            "human_review_items": result.report.human_review_items,
-            "timings_s": {k: round(v, 2) for k, v in result.timings.items()},
-        }))
+        _stdout.print_json(
+            json.dumps(
+                {
+                    "status": result.status.value,
+                    "run_dir": result.run_dir.as_posix(),
+                    "exit_code": result.exit_code,
+                    "failed_gates": [c.check_id for c in result.report.failed_gates],
+                    "warnings": [c.check_id for c in result.report.warnings],
+                    "human_review_items": result.report.human_review_items,
+                    "timings_s": {k: round(v, 2) for k, v in result.timings.items()},
+                }
+            )
+        )
     else:
         _print_summary(result.report, result.run_dir, result.timings)
     raise typer.Exit(result.exit_code)
@@ -174,8 +186,9 @@ def run_cmd(
 
 @app.command("validate")
 def validate_cmd(
-    run_dir: Annotated[Path, typer.Option("--run", help="Existing run artifact directory.",
-                                          exists=True, file_okay=False)],
+    run_dir: Annotated[
+        Path, typer.Option("--run", help="Existing run artifact directory.", exists=True, file_okay=False)
+    ],
     strict: Annotated[bool, typer.Option("--strict", help="Treat warnings as failures.")] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON on stdout.")] = False,
 ) -> None:
@@ -188,13 +201,17 @@ def validate_cmd(
     status = report.compute_status(strict)
 
     if as_json:
-        _stdout.print_json(json.dumps({
-            "status": status.value,
-            "strict": strict,
-            "run_dir": run_dir.as_posix(),
-            "failed_gates": [c.check_id for c in report.failed_gates],
-            "warnings": [c.check_id for c in report.warnings],
-        }))
+        _stdout.print_json(
+            json.dumps(
+                {
+                    "status": status.value,
+                    "strict": strict,
+                    "run_dir": run_dir.as_posix(),
+                    "failed_gates": [c.check_id for c in report.failed_gates],
+                    "warnings": [c.check_id for c in report.warnings],
+                }
+            )
+        )
     else:
         _print_summary(report, run_dir, {})
         if strict and report.warnings:
@@ -204,8 +221,9 @@ def validate_cmd(
 
 @app.command("show")
 def show_cmd(
-    run_dir: Annotated[Path, typer.Option("--run", help="Run artifact directory.",
-                                          exists=True, file_okay=False)],
+    run_dir: Annotated[
+        Path, typer.Option("--run", help="Run artifact directory.", exists=True, file_okay=False)
+    ],
 ) -> None:
     """Print the artifact tree and headline metrics for a run."""
     manifest_path = run_dir / "run_manifest.json"

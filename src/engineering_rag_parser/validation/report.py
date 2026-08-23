@@ -14,9 +14,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from ..artifacts import RunDirectory
-from ..config import ParserConfig
-from ..domain import (
+from engineering_rag_parser.artifacts import RunDirectory
+from engineering_rag_parser.config import ParserConfig
+from engineering_rag_parser.domain import (
     CheckResult,
     DocumentInventory,
     PageCoverage,
@@ -32,7 +32,11 @@ __all__ = ["build_report", "render_markdown_report", "write_pages_csv"]
 
 logger = logging.getLogger(__name__)
 
-_STATUS_ICON = {RunStatus.PASS: "PASS", RunStatus.PASS_WITH_WARNINGS: "PASS_WITH_WARNINGS", RunStatus.FAIL: "FAIL"}
+_STATUS_ICON = {
+    RunStatus.PASS: "PASS",
+    RunStatus.PASS_WITH_WARNINGS: "PASS_WITH_WARNINGS",
+    RunStatus.FAIL: "FAIL",
+}
 
 
 def build_report(
@@ -129,39 +133,75 @@ def write_pages_csv(run: RunDirectory, coverage_rows: list[PageCoverage], manife
     source_by_page = {p.page_no: p for p in manifest.pages}
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
-    writer.writerow([
-        "page_no", "source_chars", "parsed_chars", "char_coverage",
-        "furniture_chars_excluded", "source_chars_with_furniture", "source_words", "parsed_words",
-        "token_jaccard", "token_recall", "critical_token_recall", "missing_critical_tokens",
-        "source_images", "substantive_images", "substantive_image_area_fraction",
-        "is_sparse_text", "is_image_heavy", "has_provenance", "needs_visual_review",
-        "review_artifact", "severity", "notes",
-    ])
+    writer.writerow(
+        [
+            "page_no",
+            "source_chars",
+            "parsed_chars",
+            "char_coverage",
+            "furniture_chars_excluded",
+            "source_chars_with_furniture",
+            "source_words",
+            "parsed_words",
+            "token_jaccard",
+            "token_recall",
+            "critical_token_recall",
+            "missing_critical_tokens",
+            "source_images",
+            "substantive_images",
+            "substantive_image_area_fraction",
+            "is_sparse_text",
+            "is_image_heavy",
+            "has_provenance",
+            "needs_visual_review",
+            "review_artifact",
+            "severity",
+            "notes",
+        ]
+    )
     for row in coverage_rows:
         src = source_by_page.get(row.page_no)
-        writer.writerow([
-            row.page_no, row.source_chars, row.parsed_chars, f"{row.char_coverage:.4f}",
-            row.furniture_chars_excluded, row.source_chars_with_furniture,
-            row.source_words, row.parsed_words, f"{row.token_jaccard:.4f}", f"{row.token_recall:.4f}",
-            f"{row.critical_token_recall:.4f}", "|".join(row.missing_critical_tokens[:10]),
-            src.image_count if src else "", src.substantive_image_count if src else "",
-            f"{src.substantive_image_area_fraction:.4f}" if src else "",
-            row.is_sparse_text, row.is_image_heavy, row.has_provenance, row.needs_visual_review,
-            row.review_artifact or "", row.severity.value, " | ".join(row.notes),
-        ])
+        writer.writerow(
+            [
+                row.page_no,
+                row.source_chars,
+                row.parsed_chars,
+                f"{row.char_coverage:.4f}",
+                row.furniture_chars_excluded,
+                row.source_chars_with_furniture,
+                row.source_words,
+                row.parsed_words,
+                f"{row.token_jaccard:.4f}",
+                f"{row.token_recall:.4f}",
+                f"{row.critical_token_recall:.4f}",
+                "|".join(row.missing_critical_tokens[:10]),
+                src.image_count if src else "",
+                src.substantive_image_count if src else "",
+                f"{src.substantive_image_area_fraction:.4f}" if src else "",
+                row.is_sparse_text,
+                row.is_image_heavy,
+                row.has_provenance,
+                row.needs_visual_review,
+                row.review_artifact or "",
+                row.severity.value,
+                " | ".join(row.notes),
+            ]
+        )
     run.write_text("validation/pages.csv", buffer.getvalue())
     return "validation/pages.csv"
 
 
-def render_markdown_report(report: ValidationReport, manifest: SourceManifest, config: ParserConfig) -> str:
+def render_markdown_report(report: ValidationReport, manifest: SourceManifest) -> str:
     """Render the human-readable validation report."""
     lines: list[str] = []
     add = lines.append
 
     add("# Validation report")
     add("")
-    add(f"**Status: `{_STATUS_ICON[report.status]}`**"
-        + (" (strict mode: warnings fail)" if report.strict else ""))
+    add(
+        f"**Status: `{_STATUS_ICON[report.status]}`**"
+        + (" (strict mode: warnings fail)" if report.strict else "")
+    )
     add("")
     add(f"- Source: `{manifest.filename}` — {manifest.page_count} pages, {manifest.byte_size:,} bytes")
     add(f"- SHA-256: `{manifest.sha256}`")
@@ -234,8 +274,10 @@ def render_markdown_report(report: ValidationReport, manifest: SourceManifest, c
         add("")
         for t in report.tables:
             if t.notes:
-                add(f"- **{t.detected_label or f'Table region {t.table_index}'}** (page {t.page_no}): "
-                    + " ".join(t.notes))
+                add(
+                    f"- **{t.detected_label or f'Table region {t.table_index}'}** (page {t.page_no}): "
+                    + " ".join(t.notes)
+                )
         add("")
     else:
         add("No table regions were detected by Docling.")
@@ -244,7 +286,9 @@ def render_markdown_report(report: ValidationReport, manifest: SourceManifest, c
     # --- Pages ----------------------------------------------------------------
     add("## Page coverage")
     add("")
-    add("| Page | Src chars | Parsed chars | Char cov. | Token recall | Critical recall | Figures | Review | Severity |")
+    add(
+        "| Page | Src chars | Parsed chars | Char cov. | Token recall | Critical recall | Figures | Review | Severity |"
+    )
     add("|---|---|---|---|---|---|---|---|---|")
     source_by_page = {p.page_no: p for p in manifest.pages}
     for row in report.page_coverage:
@@ -269,9 +313,7 @@ def render_markdown_report(report: ValidationReport, manifest: SourceManifest, c
     else:
         add("No body lines were removed by text-based furniture stripping.")
     add("")
-    decorative_candidates = [
-        c for c in manifest.furniture_candidates if c.normalized.startswith("image:")
-    ]
+    decorative_candidates = [c for c in manifest.furniture_candidates if c.normalized.startswith("image:")]
     text_candidates = [c for c in manifest.furniture_candidates if not c.normalized.startswith("image:")]
     add(
         f"Preflight identified {len(text_candidates)} repeated text furniture pattern(s) and "

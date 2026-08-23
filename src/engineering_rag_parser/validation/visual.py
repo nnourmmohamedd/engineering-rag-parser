@@ -19,10 +19,10 @@ from typing import Any
 
 from docling_core.types.doc import ContentLayer, DoclingDocument
 
-from ..artifacts import RunDirectory
-from ..config import ParserConfig
-from ..domain import CheckResult, PageCoverage, Severity, SourceManifest
-from ..preflight import render_page_png
+from engineering_rag_parser.artifacts import RunDirectory
+from engineering_rag_parser.config import ParserConfig
+from engineering_rag_parser.domain import CheckResult, PageCoverage, Severity, SourceManifest
+from engineering_rag_parser.preflight import render_page_png
 
 __all__ = ["build_visual_reviews", "visual_checks"]
 
@@ -94,9 +94,7 @@ def _render_card(
     )
     legend = "".join(
         f'<span class="chip" style="border-color:{colour}">{html.escape(label)}</span>'
-        for label, colour in sorted(
-            {r["label"]: r["colour"] for r in regions}.items()
-        )
+        for label, colour in sorted({r["label"]: r["colour"] for r in regions}.items())
     )
     notes = "".join(f"<li>{html.escape(n)}</li>" for n in coverage.notes) or "<li>No automated notes.</li>"
     missing = (
@@ -180,9 +178,10 @@ def build_visual_reviews(
     """
     by_page = {p.page_no: p for p in coverage_rows}
     source_by_page = {p.page_no: p for p in manifest.pages}
-    targets = sorted(set(manifest.visual_review_pages) | {
-        p.page_no for p in coverage_rows if p.severity is not Severity.INFO
-    })
+    targets = sorted(
+        set(manifest.visual_review_pages)
+        | {p.page_no for p in coverage_rows if p.severity is not Severity.INFO}
+    )
 
     produced: dict[int, str] = {}
     rendered = 0
@@ -210,8 +209,13 @@ def build_visual_reviews(
 
         regions = _page_regions(document, page_no)
         card = _render_card(
-            page_no, coverage, source_page, regions, page_image_rel,
-            source_page.width_pt, source_page.height_pt,
+            page_no,
+            coverage,
+            source_page,
+            regions,
+            page_image_rel,
+            source_page.width_pt,
+            source_page.height_pt,
         )
         rel = f"validation/review/page{page_no:03d}.html"
         run.write_text(rel, card)
@@ -222,14 +226,12 @@ def build_visual_reviews(
     return produced
 
 
-def visual_checks(
-    manifest: SourceManifest, coverage_rows: list[PageCoverage], reviews: dict[int, str]
-) -> list[CheckResult]:
+def visual_checks(manifest: SourceManifest, reviews: dict[int, str]) -> list[CheckResult]:
     """Confirm every page needing visual review actually received an artifact."""
     required = set(manifest.visual_review_pages)
     missing = sorted(required - set(reviews))
 
-    checks = [
+    return [
         CheckResult(
             check_id="visual_review_coverage",
             title="Every sparse or figure-bearing page has a visual review artifact",
@@ -271,4 +273,3 @@ def visual_checks(
             remediation="Open each artifact under validation/review/ and confirm the figure content.",
         ),
     ]
-    return checks

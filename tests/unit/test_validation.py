@@ -5,14 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pytest
-
 from engineering_rag_parser.config import ParserConfig
 from engineering_rag_parser.domain import (
     CheckResult,
     DocumentInventory,
-    FurnitureCandidate,
-    ImageBlock,
     RunStatus,
     Severity,
     SourceManifest,
@@ -136,9 +132,7 @@ class TestPageCoverage:
 
     def test_short_page_is_not_judged_on_text_thresholds(self) -> None:
         """Below the sparse threshold, text metrics are recorded but must not gate."""
-        rows = build_page_coverage(
-            _manifest(1), {1: "FT-101 at 24 V DC."}, {1: ""}, ParserConfig()
-        )
+        rows = build_page_coverage(_manifest(1), {1: "FT-101 at 24 V DC."}, {1: ""}, ParserConfig())
         assert rows[0].severity is Severity.INFO
 
     def test_cross_page_content_counts_as_relocated_not_lost(self) -> None:
@@ -210,8 +204,13 @@ class TestMarkdownChecks:
         (tmp_path / "img.png").write_bytes(b"\x89PNG\r\n")
         content = "# Title\n\n## Section 1\n\n" + ("Body text about FT-101. " * 30) + "\n\n![fig](img.png)\n"
         checks = self._run(tmp_path, content)
-        for cid in ("markdown_encoding", "markdown_non_empty", "markdown_image_links",
-                    "markdown_no_base64", "markdown_no_placeholders"):
+        for cid in (
+            "markdown_encoding",
+            "markdown_non_empty",
+            "markdown_image_links",
+            "markdown_no_base64",
+            "markdown_no_placeholders",
+        ):
             assert checks[cid].passed, f"{cid} failed: {checks[cid].summary}"
 
     def test_crlf_fails(self, tmp_path: Path) -> None:
