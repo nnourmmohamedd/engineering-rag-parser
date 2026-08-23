@@ -1,0 +1,70 @@
+# Docling API introspection snapshot
+generated_by  : engineering_rag_parser (introspection, not documentation copy)
+python        : 3.13.9 (Windows-11-10.0.26200-SP0)
+docling       : 2.121.0
+docling-core  : n/a
+
+## PdfPipelineOptions() defaults
+  document_timeout                   = null
+  accelerator_options                = {"num_threads": 4, "device": "auto", "cuda_use_flash_attention2": false}
+  enable_remote_services             = false
+  allow_external_plugins             = false
+  artifacts_path                     = null
+  do_picture_classification          = false
+  picture_classification_options     = {"engine_options": {"engine_type": "transformers", "top_k": null}, "model_spec": {"name": "document_figure_classifier_v2", "repo_id": "docling-project/DocumentF
+  do_picture_description             = false
+  picture_description_options        = {"batch_size": 8, "scale": 2.0, "picture_area_threshold": 0.05, "classification_allow": null, "classification_deny": null, "classification_min_confidence": 0.0}
+  do_chart_extraction                = false
+  chart_extraction_options           = {"kind": "chart_extraction", "model": "granite-vision-v4", "chart2csv": true, "chart2code": false, "chart2summary": false}
+  images_scale                       = 1.0
+  generate_page_images               = false
+  generate_picture_images            = false
+  do_table_structure                 = true
+  do_ocr                             = true
+  do_code_enrichment                 = false
+  do_formula_enrichment              = false
+  force_backend_text                 = false
+  table_structure_options            = {}
+  ocr_options                        = {"mode": "default", "lang": [], "scale": 3.0, "force_full_page_ocr": false}
+  layout_options                     = {"keep_empty_clusters": false, "skip_cell_assignment": false, "create_orphan_clusters": true}
+  code_formula_options               = {"engine_options": {"engine_type": "auto_inline", "prefer_vllm": false}, "model_spec": {"name": "CodeFormulaV2", "default_repo_id": "docling-project/CodeFormula
+  generate_table_images              = false
+  generate_parsed_pages              = false
+  heading_hierarchy_options          = {"enabled": false, "use_bookmarks": true, "use_numbering": true, "use_style": true, "use_font_style": true, "style_size_tolerance": 0.05, "numbering_schemes": n
+  ocr_batch_size                     = 4
+  layout_batch_size                  = 4
+  table_batch_size                   = 4
+  batch_polling_interval_seconds     = 0.5
+  queue_max_size                     = 100
+  stage_shutdown_timeout_seconds     = 15.0
+
+## Enumerations
+  AcceleratorDevice    = ['auto', 'cpu', 'cuda', 'mps', 'xpu']
+  TableFormerMode      = ['fast', 'accurate']
+  OcrEngine            = ['auto', 'easyocr', 'tesseract_cli', 'tesseract', 'ocrmac', 'rapidocr']
+  OcrMode              = ['full_page', 'layout_regions', 'pdf_aware_layout_regions', 'default']
+  PdfBackend           = ['pypdfium2', 'docling_parse', 'threaded_docling_parse', 'dlparse_v1', 'dlparse_v2', 'dlparse_v4']
+  ProcessingPipeline   = ['legacy', 'standard', 'vlm', 'asr']
+  ConversionStatus     = ['pending', 'started', 'failure', 'success', 'partial_success', 'skipped']
+  ContentLayer         = ['body', 'furniture', 'background', 'invisible', 'notes']
+  ImageRefMode         = ['placeholder', 'embedded', 'referenced']
+  DocItemLabel         = ['caption', 'chart', 'footnote', 'formula', 'list_item', 'page_footer', 'page_header', 'picture', 'section_header', 'table', 'text', 'title', 'document_index', 'code', 'checkbox_selected', 'checkbox_unselected', 'form', 'key_value_region', 'grading_scale', 'handwritten_text', 'empty_value', 'paragraph', 'reference', 'field_region', 'field_heading', 'field_item', 'field_key', 'field_value', 'field_hint', 'marker']
+
+## Nested option defaults
+  TableStructureOptions: {"do_cell_matching": true, "mode": "accurate"}
+  LayoutOptions: {"keep_empty_clusters": false, "skip_cell_assignment": false, "create_orphan_clusters": true, "model_spec": {"name": "docling_layout_heron", "repo_id": "docling-project/docling-layout-heron", "revision": "main"}}
+  HeadingHierarchyOptions: {"enabled": false, "use_bookmarks": true, "use_numbering": true, "use_style": true, "use_font_style": true, "style_size_tolerance": 0.05, "numbering_schemes": null, "max_level": 6, "bookmark_match_threshold": 0.8}
+  EasyOcrOptions: {"mode": "default", "lang": ["fr", "de", "es", "en"], "scale": 3.0, "force_full_page_ocr": false, "use_gpu": null, "confidence_threshold": 0.5, "model_storage_directory": null, "recog_network": "standard", "download_enabled": true, "suppress_mps_warnings": true}
+
+## Signatures
+  DocumentConverter.__init__ (self, allowed_formats: Optional[list[docling.datamodel.base_models.InputFormat]] = None, format_options: Optional[dict[docling.datamodel.base_models.InputFormat, docling.document_converter.FormatOption]] = None) -> None
+  DocumentConverter.convert  (self, source: Union[pathlib._local.Path, str, docling_core.types.io.DocumentStream, docling.datamodel.base_models.HttpSource], headers: Optional[dict[str, str]] = None, raises_on_error: bool = True, max_num_pages: int = 9223372036854775807, max_file_size: int = 9223372036854775807, page_range: Annotated[Tuple[int, int], AfterValidator(func=<function _validate_page_range at 0x000001A7DC891B20>)] = (1, 9223372036854775807)) -> docling.datamodel.document.ConversionResult
+  DoclingDocument.save_as_json (self, filename: Union[str, pathlib._local.Path], artifacts_dir: Optional[pathlib._local.Path] = None, image_mode: docling_core.types.doc.base.ImageRefMode = <ImageRefMode.EMBEDDED: 'embedded'>, indent: int = 2, coord_precision: Optional[int] = None, confid_precision: Optional[int] = None)
+  DoclingDocument.export_to_markdown (self, delim: str = '\n\n', from_element: int = 0, to_element: int = 9223372036854775807, labels: Optional[set[docling_core.types.doc.labels.DocItemLabel]] = None, strict_text: bool = False, escape_html: bool = True, escape_underscores: bool = True, image_placeholder: str = '<!-- image -->', enable_chart_tables: bool = True, image_mode: docling_core.types.doc.base.ImageRefMode = <ImageRefMode.PLACEHOLDER: 'placeholder'>, indent: int = 4, text_width: int = -1, page_no: Optional[int] = None, included_content_layers: Optional[set[docling_core.types.doc.common.content_layer.ContentLayer]] = None, page_break_placeholder: Optional[str] = None, include_annotations: bool = True, mark_annotations: bool = False, compact_tables: bool = False, traverse_pictures: bool = False, *, use_legacy_annotations: Optional[bool] = None, allowed_meta_names: Optional[set[str]] = None, blocked_meta_names: Optional[set[str]] = None, mark_meta: bool = False) -> str
+  DoclingDocument.iterate_items (self, root: Optional[docling_core.types.doc.items.node.NodeItem] = None, with_groups: bool = False, traverse_pictures: bool = False, page_no: Optional[int] = None, included_content_layers: Optional[set[docling_core.types.doc.common.content_layer.ContentLayer]] = None, _level: int = 0) -> Iterable[tuple[docling_core.types.doc.items.node.NodeItem, int]]
+
+## Model fields
+  PdfFormatOption : ['pipeline_options', 'backend', 'pipeline_cls', 'backend_options']
+  ConversionResult: ['version', 'timestamp', 'status', 'errors', 'pages', 'timings', 'confidence', 'document', 'input', 'assembled']
+  DoclingDocument : ['schema_name', 'version', 'name', 'origin', 'furniture', 'body', 'groups', 'texts', 'pictures', 'tables', 'key_value_items', 'form_items', 'field_regions', 'field_items', 'pages']
+  ProvenanceItem  : ['page_no', 'bbox', 'charspan']
