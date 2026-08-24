@@ -131,7 +131,12 @@ class DoclingOptions(_Frozen):
     # widely copied `dlparse_v4` recipe is therefore obsolete and is not offered here.
     backend: Literal["docling_parse", "threaded_docling_parse", "pypdfium2"] = "docling_parse"
     do_ocr: bool = False
-    ocr_engine: Literal["auto", "easyocr", "rapidocr", "tesseract", "tesseract_cli", "ocrmac"] = "easyocr"
+    # rapidocr is the default: it ships its detection/classification/recognition
+    # ONNX models inside the pip wheel (~12 MB), so a scanned run needs no
+    # runtime network access. easyocr remains supported (`pip install -e ".[ocr-easyocr]"`)
+    # but downloads ~100 MB of weights from GitHub Releases on first use, which
+    # this project cannot assume is reachable in every deployment environment.
+    ocr_engine: Literal["auto", "easyocr", "rapidocr", "tesseract", "tesseract_cli", "ocrmac"] = "rapidocr"
     ocr_languages: tuple[str, ...] = ("en",)
     ocr_force_full_page: bool = False
     ocr_mode: Literal["default", "full_page", "layout_regions", "pdf_aware_layout_regions"] = "default"

@@ -305,12 +305,22 @@ def table_checks(
         CheckResult(
             check_id="labelled_tables_located",
             title="Every labelled table is located and individually reported",
-            passed=bool(located) and not unaccounted,
+            # A document that genuinely has zero 'Table N:' captions has nothing
+            # to account for, so `located` being empty must not fail this gate —
+            # only an *unaccounted* label (found in text but covered by no region
+            # at all) is a real loss. Discovered via the OCR benchmark document,
+            # which has no such caption anywhere.
+            passed=not unaccounted,
             severity=Severity.CRITICAL,
             gate=True,
             summary=(
-                f"Located {len(located)} labelled table(s) from native PDF text: "
-                + ", ".join(f"Table {n} (caption p{v['page_no']})" for n, v in sorted(located.items()))
+                (
+                    f"Located {len(located)} labelled table(s) from native PDF text: "
+                    + ", ".join(f"Table {n} (caption p{v['page_no']})" for n, v in sorted(located.items()))
+                    if located
+                    else "No 'Table N:' captions found in the source text — this document has no "
+                    "labelled tables to locate."
+                )
                 + (
                     f". Detected as a picture region rather than a table: "
                     f"{[f'Table {n}' for n in unlocated if n not in unaccounted]}"

@@ -26,13 +26,35 @@ SHA-256 `01e4d6fa…3b1a`.
 | **Tables 1, 2, 3** | **Located on pages 16, 25→26 and 23. All three bodies are raster images with no text layer — Docling recovered 0 cells. Contents are NOT machine-readable and are flagged for human transcription.** |
 | Visual review | **17** side-by-side review cards under `validation/review/` |
 | Determinism | Re-runs are **byte-identical** for every deliverable (timestamps excluded) |
-| Tests | **201 passing** (168 fast + 33 full-document acceptance) |
+| Tests | **271 passing** (229 fast + 42 slow, including the OCR/scanned path) |
 
 Full measured results: [`docs/FINAL_IMPLEMENTATION_REPORT.md`](docs/FINAL_IMPLEMENTATION_REPORT.md).
+OCR verification evidence, thresholds and metrics: [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md).
 
 The single most important finding is the table one, and it is the reason this package exists in this
 shape: a parser that silently emitted the captions and dropped the table bodies would have looked
 perfect.
+
+---
+
+## Outcome on the controlled OCR/scanned benchmark
+
+The `scanned` profile has been run end to end against a genuine image-only PDF (proven independently:
+zero extractable text, one raster image per page), not just unit-tested for option construction.
+
+| Result | Detail |
+|---|---|
+| **Status** | `PASS` — both the explicit `scanned` profile and the `auto` profile (which correctly routes an image-only document to `scanned`) |
+| OCR engine | **RapidOCR** (`rapidocr-onnxruntime`, Apache-2.0) — ships its ONNX models inside the pip wheel, so a scanned run needs no runtime network access |
+| Critical-token recall | **100%** (31/31 hand-selected identity tokens: title, reference number, table values, status labels, form fields, code identifiers) |
+| Word-type recall | 96.9% (normalized against an independent pdfminer.six/pypdf ground truth) |
+| Page handling | Both pages represented in order; the nearly-blank second page preserved, not dropped |
+| JSON / Markdown | Reloads into `DoclingDocument`; Markdown non-empty and portable |
+
+Full methodology, ground-truth manifest, thresholds and the one disclosed OCR limitation (a glyph
+misread resolved by raising render DPI) are in [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md).
+This benchmark proves the *software path* works; it is not a claim about OCR accuracy on arbitrary
+real-world scans.
 
 ---
 
@@ -138,7 +160,8 @@ python -m pip install -e ".[dev]"
 ### Optional extras
 
 ```bash
-pip install -e ".[ocr]"   # EasyOCR — only for genuinely scanned documents
+pip install -e ".[ocr]"   # RapidOCR (default engine) — only for genuinely scanned documents
+pip install -e ".[ocr-easyocr]"  # EasyOCR alternative (set docling.ocr_engine: easyocr)
 pip install -e ".[vlm]"   # local VLM picture description (off by default, see ADR-005)
 ```
 
@@ -313,7 +336,10 @@ That shim is removed upstream; use `backend: docling_parse`.
 `cuda` only with ≥ 6 GB VRAM; a CUDA OOM mid-conversion yields a *partial* document, which is the
 worst failure mode for an auditable parser.
 
-**OCR engine not found.** `pip install -e ".[ocr]"`. EasyOCR fetches ~100 MB of weights on first use.
+**OCR engine not found.** `pip install -e ".[ocr]"` installs RapidOCR (default `ocr_engine`), whose
+detection/classification/recognition ONNX models ship inside the wheel — no runtime download needed.
+The EasyOCR alternative (`pip install -e ".[ocr-easyocr]"`, `ocr_engine: easyocr`) fetches ~100 MB of
+weights from GitHub Releases on first use; verify that host is reachable before relying on it.
 
 **Windows long paths.** Artifact paths nest several levels. Enable long paths:
 `git config --system core.longpaths true` and set

@@ -298,6 +298,44 @@ def _picture_finding(represents_table_label: str | None, asset_path: str | None)
     )
 
 
+class TestLabelledTablesLocatedNoLabelsInSource:
+    """Regression test: a document with zero 'Table N:' captions must not fail
+    ``labelled_tables_located``. Found while OCR-testing a synthetic benchmark
+    PDF with a data table but no literal 'Table N:' caption text -- the gate
+    previously required `bool(located)` to be true, so any document lacking
+    that exact caption style failed CRITICAL even though there was nothing
+    unaccounted for.
+    """
+
+    def test_zero_labelled_tables_in_source_passes_the_gate(self, tmp_path: Path) -> None:
+        checks = {
+            c.check_id: c
+            for c in table_checks(
+                tables=[],
+                table_labels={},
+                config=ParserConfig(),
+                markdown_text="Plain document with a data table but no 'Table N:' caption.",
+                run_root=tmp_path,
+                pictures=[],
+            )
+        }
+        assert checks["labelled_tables_located"].passed is True
+
+    def test_genuinely_unaccounted_label_still_fails_the_gate(self, tmp_path: Path) -> None:
+        checks = {
+            c.check_id: c
+            for c in table_checks(
+                tables=[],
+                table_labels={1: {"page_no": 1, "title": "x", "source": "native_pdf_text"}},
+                config=ParserConfig(),
+                markdown_text="No asset, no warning, nothing covers this label.",
+                run_root=tmp_path,
+                pictures=[],
+            )
+        }
+        assert checks["labelled_tables_located"].passed is False
+
+
 class TestTableChecksPictureBackedTable:
     """Regression tests for D-5: a labelled table detected only as a picture region."""
 
