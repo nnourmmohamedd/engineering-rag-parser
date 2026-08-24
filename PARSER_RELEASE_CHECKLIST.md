@@ -65,16 +65,18 @@ Evidence-based checklist for the mentor-required service restructure. See
 | Clean installation (second `.venv-clean`, against the new package) | ✅ DONE | `--version`, `--help`, 246 fast tests, ruff, mypy, build, OCR smoke test all PASS |
 | OCR acceptance re-run through the new architecture | ✅ DONE | `PASS`, 100% critical-token recall, under `data/output/parser/` |
 | Engineering-PDF acceptance re-run through the new architecture | ✅ DONE | `PASS_WITH_WARNINGS`, same 4 legitimate warnings, under `data/output/parser/` |
-| Git safety audit | see `RESTRUCTURE_COMPLETION_REPORT.md` | |
-| Commit | see `RESTRUCTURE_COMPLETION_REPORT.md` | |
-| Push to GitHub | see `RESTRUCTURE_COMPLETION_REPORT.md` | subject to the network-connection rule |
-| GitHub Actions CI | see `RESTRUCTURE_COMPLETION_REPORT.md` | |
+| Git safety audit | ✅ DONE | See `RESTRUCTURE_COMPLETION_REPORT.md` §18 |
+| Commit | ✅ DONE | `7415bde` (restructure) .. `1a75dde` (CI formatting fix) |
+| Push to GitHub | ✅ DONE | `refactor/service-architecture` pushed and merged |
+| Pull request | ✅ MERGED | PR #1, `refactor/service-architecture` → `master`, merge commit `8376a93` |
+| GitHub Actions CI | ✅ GREEN | Python 3.11 and Python 3.13 jobs both passed after the formatting fix |
+| Local `master` synced with `origin/master`, feature branch cleaned up | ✅ DONE | Fast-forwarded to `8376a93`; local and remote `refactor/service-architecture` both deleted |
 
 ## Completion summary (after restructure)
 
 ```text
 Parser functionality:                 100%
-Parser architecture restructuring:    see RESTRUCTURE_COMPLETION_REPORT.md for the final verdict
+Parser architecture restructuring:    PASS — merged to master, CI green on Python 3.11 and 3.13
 Controlled OCR benchmark:             PASS
 Original engineering PDF:             PASS_WITH_WARNINGS
 Human engineering review:             PENDING

@@ -27,11 +27,12 @@ restructure: the OCR benchmark **PASS** with 100% critical-token recall, and
 the original 27-page engineering PDF **PASS_WITH_WARNINGS** with the same 4
 legitimate, document-level warnings. Fast tests (246), slow tests (42),
 coverage (84%), ruff, mypy, the wheel build, and a second independent
-clean-installation all pass. The branch is committed and pushed to GitHub;
-**GitHub Actions has not yet run**, because this repository's CI workflow
-triggers only on `push` to `main`/`master` or on a `pull_request`, and the
-GitHub CLI in this environment is unauthenticated, so the pull request could
-not be opened programmatically — see §20–22.
+clean-installation all pass. Pull request #1 (`refactor/service-architecture`
+→ `master`) was opened, one CI-only defect was found and fixed (§19.1), and
+**both GitHub Actions jobs (Python 3.11 and Python 3.13) passed**. The PR was
+merged into `master` (merge commit `8376a93`), the remote and local feature
+branches were deleted, and local `master` is fast-forwarded to match
+`origin/master` exactly — see §19–22.
 
 ## 2. Final directory tree
 
@@ -312,56 +313,75 @@ files plus `data/input/.gitkeep` and `data/output/.gitkeep`. No PDF, no
 absolute path. `.gitignore` verified with `git check-ignore -v` /
 `git add -n` before and after editing.
 
-## 19. Git commit
+## 19. Git commits
 
-| | |
+| Commit | Message |
 |---|---|
-| Restructure commit | `7415bde7f62449476d0687cd508be3cca4377646` (`7415bde`) — "Refactor parser into service architecture with centralized logging" (82 files, +2641/-1331) |
-| Follow-up commit | `8d46a74` — "Add restructure completion report" (this file) |
-| Branch tip | `8d46a74` |
+| `7415bde` | Refactor parser into service architecture with centralized logging (82 files, +2641/-1331) |
+| `8d46a74` | Add restructure completion report |
+| `639af27` | Record follow-up commit hash in the restructure report |
+| `1a75dde` | Fix CI formatting check (§19.1) |
+| `8376a93` | Merge pull request #1 from nnourmmohamedd/refactor/service-architecture (merge commit, on `master`) |
+
+### 19.1 CI defect found and fixed
+
+Once the PR was opened, both GitHub Actions jobs (Python 3.11, Python 3.13)
+initially **failed** on the `ruff format --check .` step:
+
+```text
+1 file would be reformatted, 84 files already formatted
+Error: Process completed with exit code 1
+```
+
+Root cause: `docs/architecture/service_architecture.md` (written after this
+pass's last local `ruff format` run) contains two embedded Python code
+fences, and ruff formats embedded code blocks in Markdown too — so the doc's
+hand-aligned trailing comments and a missing blank line after an `import`
+inside the example snippets were flagged. Reproduced locally with
+`ruff format --check .`, fixed with `ruff format .`; the resulting diff was
+inspected and contains only cosmetic whitespace changes inside two example
+snippets, no other content changed. Every local CI-equivalent check
+(`ruff format --check .`, `ruff check .`, `mypy src`, `pytest -m "not slow"`
+— 246 passed, notebook validation, `python -m build --wheel` plus the
+wheel-content checks) was re-run and passed before committing `1a75dde` and
+pushing. GitHub Actions was then re-run and both jobs passed.
 
 ## 20. GitHub branch
 
-`refactor/service-architecture`, pushed to
-`https://github.com/nnourmmohamedd/engineering-rag-parser.git`.
+`refactor/service-architecture` was pushed, used for PR #1, merged into
+`master`, and then deleted — both on the remote (by the merge) and locally
+(`git branch -d refactor/service-architecture`, after confirming it was
+listed under `git branch --merged master`). It no longer exists in either
+location; `master` is the sole active branch, fast-forwarded to `8376a93`.
 
-*Process note:* the commit was made directly on `master` by mistake, then
-corrected before pushing — `refactor/service-architecture` was created at
-that commit, `master` was reset back to its prior tip (`aa6cdc3`, unchanged
-from before this session, still 2 commits ahead of `origin/master` from an
-earlier session's unpushed work — unrelated to this restructure and left
-untouched, since pushing `master` was not part of this task's instructions).
-No work was lost: the reset only moved a branch pointer, and the restructure
-commit was already reachable from the new branch first.
+*Process note (unchanged from the prior version of this report):* the first
+restructure commit was made directly on `master` by mistake, then corrected
+before pushing — `refactor/service-architecture` was created at that commit
+and `master` was reset back to its prior tip before either was pushed. No
+work was lost; this is recorded here only for traceability.
 
 ## 21. Pull-request URL
 
-**Not created — GitHub CLI is unauthenticated in this environment**
-(`gh auth status` → "You are not logged into any GitHub hosts"), so the PR
-could not be opened programmatically, consistent with the same blocker
-recorded in `PARSER_RELEASE_CHECKLIST.md` from the prior OCR-verification
-pass. GitHub itself returned a ready-to-use creation link on push:
-
-**https://github.com/nnourmmohamedd/engineering-rag-parser/pull/new/refactor/service-architecture**
-
-Suggested title: `Refactor parser into service architecture with centralized logging`.
-Suggested body: the bullet list in the commit message plus a link to this
-report.
+**https://github.com/nnourmmohamedd/engineering-rag-parser/pull/1**
+(`refactor/service-architecture` → `master`) — opened by the user (this
+session's GitHub CLI remained unauthenticated throughout; the PR was created
+outside this session), reviewed, and **merged** (merge commit `8376a93`).
 
 ## 22. GitHub Actions URL and result
 
-**Not yet run.** `.github/workflows/ci.yml` triggers only on `push` to
-`main`/`master` or on `pull_request` — pushing a feature branch alone does
-not trigger it, and no PR exists yet (§21) to trigger the `pull_request`
-event. `gh run list`/`gh run watch` could not be used for the same
-authentication reason. **Once the PR above is opened, CI will run
-automatically**; watch it at
-`https://github.com/nnourmmohamedd/engineering-rag-parser/actions`.
-This report does not claim CI passed — only that the workflow YAML is valid
-(parses) and that every check the workflow runs (ruff, mypy, fast tests with
-coverage, notebook validation, wheel build, wheel-content checks) was already
-independently re-executed locally and passed, in both `.venv` and the
-temporary `.venv-clean` (§10–15).
+**https://github.com/nnourmmohamedd/engineering-rag-parser/actions** —
+**both jobs green** after the fix in §19.1:
+
+| Job | Result |
+|---|---|
+| Python 3.11 | ✅ PASS |
+| Python 3.13 | ✅ PASS |
+
+Each job's steps (ruff format check, ruff lint, mypy, fast tests with
+coverage, notebook validation, wheel build, wheel-content checks) all passed.
+This is a genuine CI confirmation, not an inference from local checks alone —
+the initial failure and its fix (§19.1) were observed through the actual
+Actions run.
 
 ## 23. Remaining document-level limitations
 
@@ -378,14 +398,13 @@ legitimate, source-property warnings. Full detail: `docs/limitations.md`,
 
 **Parser software functionality: 100%** (unchanged; re-verified with no
 regression under the new architecture, §16–17).
-**Parser architecture restructuring: PASS locally** — package structure,
-tests, quality gates, wheel, clean install and both acceptance runs all
-verified; **GitHub Actions confirmation is pending** on the PR being opened
-(§21–22), which requires either GitHub CLI authentication or a human opening
-the link above. **Full future RAG system: ~18%** (unchanged; chunking,
-embeddings, vector storage, retrieval, reranking and generation remain
-unimplemented, by design). **Chunking milestone: NOT STARTED**
-(`services/chunker/` is a documented empty scaffold only).
+**Parser architecture restructuring: PASS** — package structure, tests,
+quality gates, wheel, clean install and both acceptance runs all verified
+locally; PR #1 merged into `master` (`8376a93`); both GitHub Actions jobs
+(Python 3.11, Python 3.13) green (§19–22). **Full future RAG system: ~18%**
+(unchanged; chunking, embeddings, vector storage, retrieval, reranking and
+generation remain unimplemented, by design). **Chunking milestone: NOT
+STARTED** (`services/chunker/` is a documented empty scaffold only).
 
 ## 25. Readiness for the chunking milestone
 

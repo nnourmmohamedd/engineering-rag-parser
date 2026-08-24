@@ -610,7 +610,7 @@ authoritative report for this pass.
 | Dimension | Status |
 |---|---|
 | Parser software functionality | **100%** (unchanged from §19 — verified with no regression under the new architecture) |
-| Parser architecture restructuring | See `RESTRUCTURE_COMPLETION_REPORT.md` for the exact verdict (PASS once Git/CI evidence there confirms it) |
+| Parser architecture restructuring | **PASS** — PR #1 merged into `master` (`8376a93`); both GitHub Actions jobs (Python 3.11, Python 3.13) green. See `RESTRUCTURE_COMPLETION_REPORT.md` for full evidence |
 | Controlled OCR benchmark | **PASS** (unchanged, re-verified through the new paths) |
 | Original engineering PDF | `PASS_WITH_WARNINGS` (unchanged, re-verified through the new paths) |
 | Human engineering semantic review | **PENDING** — unchanged; not affected by a structural refactor |
