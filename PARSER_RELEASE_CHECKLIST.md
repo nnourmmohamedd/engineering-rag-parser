@@ -21,9 +21,9 @@ for full detail. Nothing here is marked done without evidence.
 | Notebook validation | ✅ DONE | Valid nbformat 4.5, 31 cells |
 | Main acceptance PDF re-run (regression check) | ✅ DONE | Run `20260824T103000Z-01e4d6fa`, `PASS_WITH_WARNINGS`, same 4 legitimate warnings as before, 37/37 gates evaluated, 0 failed |
 | Git safety audit | ✅ DONE | Staged file set is exactly 9 modified + 8 new source/doc/test files; no PDFs, artifacts, secrets, `.venv`, or absolute paths staged |
-| Commit | ⏳ PENDING | Commit hash recorded after this checklist is committed alongside it |
-| Push to GitHub | ⏳ PENDING | `https://github.com/nnourmmohamedd/engineering-rag-parser` (remote already configured from a prior session; branch `master` already tracks `origin/master`) |
-| GitHub Actions CI run | ⏳ PENDING | `gh` CLI is not authenticated in this environment (`gh auth status` reports not logged in); the workflow will run automatically on push, confirm at the repository's **Actions** tab |
+| Commit | ✅ DONE | `b4248de` — "Verify OCR/scanned path end-to-end with RapidOCR, fix D-7 gate defect" |
+| Push to GitHub | ❌ BLOCKED (confirmed external network restriction, not a code/auth problem) | `git push -u origin master` fails with `Recv failure: Connection was reset` against `https://github.com/nnourmmohamedd/engineering-rag-parser.git`. Diagnosed: TCP connects to `github.com:443` and `:22`, but the TLS/application-layer exchange resets — the same restriction that blocked EasyOCR's model download from `github.com` earlier in this session (§18.3). User confirmed this network blocks GitHub. **Action once off this network:** `git push -u origin master` (commit `b4248de` is already made locally and ready to push; nothing else to do). |
+| GitHub Actions CI run | ⏳ PENDING (blocked on the push above) | Cannot run until the push succeeds. Once pushed, check `https://github.com/nnourmmohamedd/engineering-rag-parser/actions`. `gh` CLI is also not authenticated in this environment as a secondary blocker. |
 | Human engineering review of diagrams/raster tables | ⏳ PENDING (by design) | Not fabricated as complete; 3 unrecovered tables and 15 diagrams on the acceptance document still require a qualified human reviewer — see `validation/review/*.html` in the acceptance run |
 
 ## Completion summary
