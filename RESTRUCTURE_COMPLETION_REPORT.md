@@ -316,9 +316,9 @@ absolute path. `.gitignore` verified with `git check-ignore -v` /
 
 | | |
 |---|---|
-| Hash | `7415bde7f62449476d0687cd508be3cca4377646` (`7415bde`) |
-| Message | "Refactor parser into service architecture with centralized logging" |
-| Files changed | 82 files, +2641/-1331 |
+| Restructure commit | `7415bde7f62449476d0687cd508be3cca4377646` (`7415bde`) — "Refactor parser into service architecture with centralized logging" (82 files, +2641/-1331) |
+| Follow-up commit | `8d46a74` — "Add restructure completion report" (this file) |
+| Branch tip | `8d46a74` |
 
 ## 20. GitHub branch
 
