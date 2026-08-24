@@ -576,9 +576,54 @@ py -3.13 -m venv .venv-clean
 
 ---
 
+## 21. Service-architecture restructure (2026-08-24, third pass)
+
+This section records a structural migration, not a parsing-behaviour change.
+Everything in §1–20 above describes the parser as it existed under the flat
+`src/engineering_rag_parser/` package (module names like `pipeline_factory.py`,
+`parser.py`, `domain.py` in §5–6/§18 are historical evidence of that state and
+are retained unedited for traceability — they were correct descriptions of the
+code at the time each defect was found and fixed).
+
+The parser was then restructured, at the mentor's requirement, into a
+service-oriented layout under `src/engineering_rag/`:
+`services/parser/` (the complete parser, moved and — where two responsibilities
+shared one file — split, never rewritten), `pipelines/parsing_pipeline.py`
+(thin orchestration), `api/cli.py` (the CLI), `utils/{paths,hashing,logging}.py`
+(new shared helpers, including centralized `logging`), and empty, documented
+boundary packages for the next milestones (`services/chunker/`, `clients/`,
+`databases/`, `prompts/`).
+
+**No parsing behaviour changed.** The OCR benchmark and the original
+27-page engineering PDF were both re-run through the new architecture and
+paths (`data/output/parser/`, replacing `artifacts/` as the default) and
+produced the same status, the same gate results, and the same 100%
+document-level critical-token recall as §8–11 and §18 above. Full evidence —
+migration mapping, test results (now 246 fast + 42 slow = 288, up from 271;
+the increase is new `utils/`-module tests and new architecture-boundary
+tests, not lost coverage), coverage, ruff, mypy, wheel inspection, a second
+clean-install run against the new package, the two acceptance re-runs, and
+the Git/CI outcome — is in
+[`RESTRUCTURE_COMPLETION_REPORT.md`](RESTRUCTURE_COMPLETION_REPORT.md), the
+authoritative report for this pass.
+
+| Dimension | Status |
+|---|---|
+| Parser software functionality | **100%** (unchanged from §19 — verified with no regression under the new architecture) |
+| Parser architecture restructuring | See `RESTRUCTURE_COMPLETION_REPORT.md` for the exact verdict (PASS once Git/CI evidence there confirms it) |
+| Controlled OCR benchmark | **PASS** (unchanged, re-verified through the new paths) |
+| Original engineering PDF | `PASS_WITH_WARNINGS` (unchanged, re-verified through the new paths) |
+| Human engineering semantic review | **PENDING** — unchanged; not affected by a structural refactor |
+| Full future RAG chatbot | **~18%** (unchanged; chunking, embeddings, retrieval, reranking, generation remain unimplemented) |
+| Chunking milestone | **NOT STARTED** — `services/chunker/` is a documented empty scaffold only |
+
+---
+
 *This report was produced by re-executing every command it cites, on the
-final code state, in this repository's own `.venv`. It supersedes the
-completion percentages and defect list in `PROJECT_COMPLETION_AUDIT.md`,
-which remains the evidence baseline this pass was scoped against and is
-retained for traceability. §18–20 record the second, OCR-focused
-verification pass; §1–17 record the first.*
+final code state, in this repository's own `.venv` (and, for §21, a second
+temporary `.venv-clean`). It supersedes the completion percentages and defect
+list in `PROJECT_COMPLETION_AUDIT.md`, which remains the evidence baseline
+the first pass was scoped against and is retained for traceability. §18–20
+record the second, OCR-focused verification pass; §1–17 record the first;
+§21 records the third, architecture-restructure pass — see
+`RESTRUCTURE_COMPLETION_REPORT.md` for its full evidence.*

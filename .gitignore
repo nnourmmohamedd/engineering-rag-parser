@@ -27,12 +27,16 @@ coverage.xml
 notebooks/**/*.nbconvert.ipynb
 
 # --- Confidential source documents (NEVER commit) ---
-data/input/
+data/input/**
 data/**/*.pdf
 *.pdf
 !tests/fixtures/**/*.pdf
+!data/input/.gitkeep
 
 # --- Generated run artifacts (contain extracted document content) ---
+data/output/**
+!data/output/.gitkeep
+# Pre-migration output root; retained so any pre-existing local runs stay ignored.
 artifacts/
 quarantine/
 *.jsonl

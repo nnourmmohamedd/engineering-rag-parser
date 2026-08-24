@@ -84,14 +84,14 @@ dev = [
 ]
 
 [project.scripts]
-engrag-parse = "engineering_rag_parser.cli:main"
+engrag-parse = "engineering_rag.api.cli:app"
 
 [project.urls]
 Documentation = "https://github.com/example/engineering-rag-parser#readme"
 Source = "https://github.com/example/engineering-rag-parser"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/engineering_rag_parser"]
+packages = ["src/engineering_rag"]
 
 # ---------------------------------------------------------------------------
 # Tooling
@@ -128,7 +128,7 @@ ignore = [
 "tests/**" = ["ARG", "BLE", "B011", "TID252"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["engineering_rag_parser"]
+known-first-party = ["engineering_rag"]
 
 [tool.mypy]
 # Deliberately NOT pinned to the minimum supported version: numpy's bundled
@@ -166,7 +166,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["src/engineering_rag_parser"]
+source = ["src/engineering_rag"]
 branch = true
 
 [tool.coverage.report]

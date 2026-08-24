@@ -42,9 +42,11 @@ Concretely, for an engineering-document corpus:
 - Reproducibility beats latency. `config_hash` + source SHA-256 + immutable run
   directories mean a result from six months ago can be re-derived and diffed.
 - The confidential input never leaves the machine — no network surface at all.
-- Boundaries are already service-shaped: `run_pipeline()` is a pure
-  function of `(path, config, artifacts_base)`. A FastAPI handler or a Celery
-  task is a wrapper, not a rewrite.
+- Boundaries are already service-shaped: `engineering_rag.pipelines.parsing_pipeline.run_parsing_pipeline()`
+  is a pure function of `(pdf_path, config, output_root)`, delegating to
+  `engineering_rag.services.parser.ParserService`. A FastAPI handler (living
+  in `engineering_rag.api`, alongside the CLI) or a Celery task is a wrapper,
+  not a rewrite.
 
 ### 3. Internal API service + worker queue
 
@@ -63,12 +65,12 @@ review this project has not had. Premature by a wide margin.
 The boundary is already drawn, so growing into option 3 is additive:
 
 ```python
-# Future FastAPI adapter — no parsing code changes.
+# Future FastAPI adapter — would live in engineering_rag.api, no parsing code changes.
 @app.post("/parse")
 async def parse(file: UploadFile, profile: str = "high_fidelity"):
     path = save_to_scratch(file)  # new
     config = load_config(f"configs/{profile}.yaml")  # existing
-    result = run_pipeline(path, config, ARTIFACTS_ROOT)  # existing, untouched
+    result = run_parsing_pipeline(path, config, OUTPUT_ROOT)  # existing, untouched
     return {
         "status": result.status.value,
         "run_id": result.run_dir.name,
@@ -78,7 +80,7 @@ async def parse(file: UploadFile, profile: str = "high_fidelity"):
 
 What would still need building: request auth, upload size limits at the edge
 (the parser's own limits already exist), a job store, and artifact retention.
-None of it touches `src/engineering_rag_parser/`.
+None of it touches `src/engineering_rag/services/parser/`.
 
 ## On Docker
 

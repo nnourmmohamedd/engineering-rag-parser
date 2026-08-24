@@ -26,7 +26,7 @@ for full detail. Nothing here is marked done without evidence.
 | GitHub Actions CI run | ⏳ PENDING (blocked on the push above) | Cannot run until the push succeeds. Once pushed, check `https://github.com/nnourmmohamedd/engineering-rag-parser/actions`. `gh` CLI is also not authenticated in this environment as a secondary blocker. |
 | Human engineering review of diagrams/raster tables | ⏳ PENDING (by design) | Not fabricated as complete; 3 unrecovered tables and 15 diagrams on the acceptance document still require a qualified human reviewer — see `validation/review/*.html` in the acceptance run |
 
-## Completion summary
+## Completion summary (parser milestone, pre-restructure)
 
 ```text
 Parser software milestone:            100%
@@ -34,4 +34,50 @@ Controlled OCR benchmark:             PASS
 Original engineering PDF:             PASS_WITH_WARNINGS (4 legitimate, unchanged warnings)
 Human engineering semantic review:    PENDING
 Full RAG chatbot:                     ~18% (unchanged; out of scope for this pass)
+```
+
+---
+
+## Service-architecture restructure checklist (2026-08-24, third pass)
+
+Evidence-based checklist for the mentor-required service restructure. See
+`RESTRUCTURE_COMPLETION_REPORT.md` for full detail on every row.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Migration inventory written before implementation | ✅ DONE | `docs/architecture/service_restructure_plan.md` |
+| Package moved to `src/engineering_rag/{api,pipelines,services,utils,clients,databases,prompts}` | ✅ DONE | Old `src/engineering_rag_parser/` removed entirely; no duplicated implementation |
+| Parser logic isolated in `services/parser/` | ✅ DONE | `service.py` exposes `ParserService`/`ParserRequest`/`ParserResult` |
+| Orchestration isolated in `pipelines/` | ✅ DONE | `pipelines/parsing_pipeline.py` |
+| `services/chunker/` scaffolded, not implemented | ✅ DONE | Empty `__init__.py` + documented `README.md` contract |
+| `clients/`, `databases/`, `prompts/` boundaries created, not implemented | ✅ DONE | Each is an empty package + `README.md` |
+| Centralized `logging` (console + per-run file + optional JSONL + run/document/stage context) | ✅ DONE | `utils/logging.py`, wired at `api/cli.py` only |
+| Default I/O roots moved to `data/input` / `data/output/parser` | ✅ DONE | `utils/paths.py`; `--artifacts` still overridable |
+| All source/test/notebook/script/doc imports updated | ✅ DONE | Verified via `grep -r engineering_rag_parser` returning only historical-record hits in dated report sections |
+| Tests restructured to mirror services | ✅ DONE | `tests/{unit,integration}/{services/parser,pipelines,api,utils}/` |
+| Architecture tests (dependency direction, no Docling leakage, no circular imports) | ✅ DONE | `tests/unit/test_architecture.py::TestServiceArchitectureBoundaries` |
+| Fast tests | ✅ DONE | 246 passed, 0 failed (up from 229 — new `utils`/architecture tests, none lost) |
+| Slow tests | ✅ DONE | 42 passed, 0 failed (same real OCR + 27-page acceptance suite, unchanged) |
+| Coverage | ✅ DONE | 84% (unchanged) against `--cov=engineering_rag` |
+| Ruff (format + lint) | ✅ DONE | Both PASS |
+| mypy | ✅ DONE | PASS — no issues in 31 source files (up from 17 — finer-grained modules) |
+| Package build | ✅ DONE | Wheel contains the complete `engineering_rag/` tree, entry point `engineering_rag.api.cli:app` |
+| Clean installation (second `.venv-clean`, against the new package) | ✅ DONE | `--version`, `--help`, 246 fast tests, ruff, mypy, build, OCR smoke test all PASS |
+| OCR acceptance re-run through the new architecture | ✅ DONE | `PASS`, 100% critical-token recall, under `data/output/parser/` |
+| Engineering-PDF acceptance re-run through the new architecture | ✅ DONE | `PASS_WITH_WARNINGS`, same 4 legitimate warnings, under `data/output/parser/` |
+| Git safety audit | see `RESTRUCTURE_COMPLETION_REPORT.md` | |
+| Commit | see `RESTRUCTURE_COMPLETION_REPORT.md` | |
+| Push to GitHub | see `RESTRUCTURE_COMPLETION_REPORT.md` | subject to the network-connection rule |
+| GitHub Actions CI | see `RESTRUCTURE_COMPLETION_REPORT.md` | |
+
+## Completion summary (after restructure)
+
+```text
+Parser functionality:                 100%
+Parser architecture restructuring:    see RESTRUCTURE_COMPLETION_REPORT.md for the final verdict
+Controlled OCR benchmark:             PASS
+Original engineering PDF:             PASS_WITH_WARNINGS
+Human engineering review:             PENDING
+Full RAG system:                      ~18%
+Chunking milestone:                   NOT STARTED
 ```

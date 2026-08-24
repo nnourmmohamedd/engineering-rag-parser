@@ -20,13 +20,13 @@ from docling.datamodel.pipeline_options import (
     TableFormerMode,
 )
 
-from engineering_rag_parser.config import Profile, load_config
-from engineering_rag_parser.pipeline_factory import (
+from engineering_rag.services.parser.config import Profile, load_config
+from engineering_rag.services.parser.converter import (
     _describe_suboption,
     build_pipeline_options,
     docling_versions,
-    resolve_profile_config,
 )
+from engineering_rag.services.parser.profiles import resolve_profile_config
 
 
 def _dumped(pipeline: PdfPipelineOptions) -> dict[str, object]:
@@ -324,8 +324,8 @@ def main() -> None:
     add("Regenerate this file with:")
     add("")
     add("```bash")
-    add('python -c "from engineering_rag_parser.pipeline_factory import describe_effective_options; \\')
-    add("from engineering_rag_parser.config import load_config; import json; \\")
+    add('python -c "from engineering_rag.services.parser.converter import describe_effective_options; \\')
+    add("from engineering_rag.services.parser.config import load_config; import json; \\")
     add(
         "print(json.dumps(describe_effective_options(load_config('configs/high_fidelity.yaml')), indent=2))\""
     )

@@ -75,7 +75,7 @@ jobs:
         # set just below the measured cold-cache floor, not an invented target.
         run: |
           python -m pytest -m "not slow" \
-            --cov=engineering_rag_parser --cov-report=term-missing --cov-report=xml \
+            --cov=engineering_rag --cov-report=term-missing --cov-report=xml \
             --cov-fail-under=55
 
       - name: Upload coverage report
@@ -99,6 +99,24 @@ jobs:
           import zipfile, sys, glob
           path = glob.glob('dist/*.whl')[0]
           names = zipfile.ZipFile(path).namelist()
-          bad = [n for n in names if n.endswith('.pdf') or n.startswith('artifacts/')]
+          bad = [n for n in names if n.endswith('.pdf') or n.startswith('artifacts/') or n.startswith('data/output/')]
           sys.exit(1) if bad else None
+          "
+
+      - name: Wheel contains the engineering_rag service architecture
+        shell: bash
+        run: |
+          python -c "
+          import zipfile, sys, glob
+          path = glob.glob('dist/*.whl')[0]
+          names = zipfile.ZipFile(path).namelist()
+          required = [
+              'engineering_rag/api/cli.py',
+              'engineering_rag/pipelines/parsing_pipeline.py',
+              'engineering_rag/services/parser/service.py',
+              'engineering_rag/services/chunker/__init__.py',
+              'engineering_rag/utils/logging.py',
+          ]
+          missing = [r for r in required if not any(n.endswith(r) for n in names)]
+          sys.exit(1) if missing else None
           "

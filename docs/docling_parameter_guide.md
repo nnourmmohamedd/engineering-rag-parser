@@ -226,7 +226,7 @@ Dumped from the constructed object for the `high_fidelity` profile:
 Regenerate this file with:
 
 ```bash
-python -c "from engineering_rag_parser.pipeline_factory import describe_effective_options; \
-from engineering_rag_parser.config import load_config; import json; \
+python -c "from engineering_rag.services.parser.converter import describe_effective_options; \
+from engineering_rag.services.parser.config import load_config; import json; \
 print(json.dumps(describe_effective_options(load_config('configs/high_fidelity.yaml')), indent=2))"
 ```

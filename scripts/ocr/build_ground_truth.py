@@ -8,7 +8,7 @@ under test.
 Usage:
     python scripts/ocr/build_ground_truth.py \
         --input data/input/ocr/scanned_docling_test_source.pdf \
-        --output artifacts/ocr_validation/ground_truth_manifest.json \
+        --output data/output/ocr_validation/ground_truth_manifest.json \
         --critical-tokens scripts/ocr/critical_tokens.json
 """
 

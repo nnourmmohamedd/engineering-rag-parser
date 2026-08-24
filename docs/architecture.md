@@ -14,9 +14,11 @@ That produces three structural commitments:
 1. **An independent baseline.** Preflight measures the source with a completely
    separate library stack. If Docling were also the baseline, every coverage
    metric would be Docling agreeing with itself.
-2. **A single Docling isolation layer.** All Docling construction lives in
-   `pipeline_factory.py`; all Docling *result* handling lives in `parser.py`.
-   Everything else speaks the project's own domain types.
+2. **A single Docling isolation layer.** All Docling construction and result
+   handling lives in `services/parser/converter.py` (plus the sibling
+   `exporters.py`, `inventory.py` and `validation/{structure,visual}.py`, each
+   for their own narrow slice). Everything else speaks the project's own
+   domain types.
 3. **Validation as a product feature.** Checks carry severity, evidence,
    threshold and remediation, and the run has a terminal status with a non-zero
    exit code on failure.
@@ -30,30 +32,31 @@ That produces three structural commitments:
                     │                                        │
        (independent baseline)                        (Docling pipeline)
                     │                                        │
-        preflight.inspect_source()                pipeline_factory.build_converter()
-        pypdf · pdfminer.six · pypdfium2                     │
-                    │                             parser.convert_pdf()
-            SourceManifest ──────────┐                       │
-            • per-page chars/words   │              ConversionOutcome
-            • raster image bboxes    │              • status / partial / errors
-            • repeated-image sigs    │              • confidence · timings
-            • furniture candidates   │                       │
-            • visual-review pages    │              DoclingDocument
+     preflight.inspect_source()                  profiles.choose_profile()
+     pypdf · pdfminer.six · pypdfium2             converter.build_converter()
+                    │                                        │
+            SourceManifest ──────────┐              converter.convert_pdf()
+            • per-page chars/words   │                       │
+            • raster image bboxes    │              ConversionOutcome
+            • repeated-image sigs    │              • status / partial / errors
+            • furniture candidates   │              • confidence · timings
+            • visual-review pages    │                       │
+                    │                │              DoclingDocument
                     │                │                       │
                     │                │        ┌──────────────┼───────────────┐
                     │                │        │              │               │
-                    │                │  save_document_   exporters.       parser.
-                    │                │     json()        classify_       build_
-                    │                │        │          pictures()     inventory()
-                    │                │  docling/          export_            │
-                    │                │  document.json     assets()     DocumentInventory
-                    │                │                    export_            │
-                    │                │                    markdown()        │
+                    │                │ converter.        exporters.     inventory.
+                    │                │ save_document_    classify_      build_
+                    │                │    json()         pictures()    inventory()
+                    │                │        │          export_            │
+                    │                │  docling/         assets()     DocumentInventory
+                    │                │  document.json    export_            │
+                    │                │                   markdown()         │
                     │                │                        │             │
                     │                └────────────┬───────────┘             │
                     │                             │                          │
                     └──────────────► validation/ ◄┴──────────────────────────┘
-                                     coverage · structure · markdown · visual
+                                     source · structure · markdown · visual
                                                   │
                                           ValidationReport
                                      PASS / PASS_WITH_WARNINGS / FAIL
@@ -62,29 +65,38 @@ That produces three structural commitments:
                                           + run_manifest.json
 ```
 
-`pipeline.run_pipeline()` is the only place that orders these steps. It owns
-sequencing and artifact placement and contains no parsing logic — which is what
-makes a future FastAPI/worker adapter a thin wrapper rather than a rewrite.
+`services/parser/service.py::ParserService.run()` is the only place that
+orders these steps — this is parser-domain behaviour, so it lives inside the
+service, not the orchestration layer. `pipelines/parsing_pipeline.py` is a
+thin wrapper the CLI (and any future adapter) calls, so a future FastAPI/worker
+adapter reuses that same wrapper rather than duplicating sequencing logic.
 
 ## Module responsibilities
 
 | Module | Owns | Deliberately does **not** |
 |---|---|---|
-| `config.py` | Public YAML contract, profiles, thresholds, config hashing | Import Docling. Public keys stay stable across Docling upgrades |
-| `domain.py` | Shared vocabulary: manifests, inventories, findings, report | Import Docling — a manifest written today must load after an upgrade |
-| `normalization.py` | Pure text primitives: folding, tokenising, span diffing | Touch the filesystem or any library — fully unit-testable |
-| `preflight.py` | Independent source manifest, page rendering | Use Docling for any measurement |
-| `pipeline_factory.py` | **All** Docling option/converter construction | Run a conversion |
-| `parser.py` | Conversion, status/partial handling, canonical JSON, inventory | Decide artifact layout |
-| `exporters.py` | Picture classification, asset writing, Markdown post-processing | Invent content |
-| `artifacts.py` | Immutable run dirs, safe paths, hashing, run manifest, JSONL log | Know what a "page" is |
-| `validation/*` | Checks with severity + evidence + threshold + remediation | Mutate artifacts |
-| `pipeline.py` | Orchestration only | Parse anything itself |
-| `cli.py` | Presentation and exit codes | Contain logic worth testing separately |
+| `services/parser/config.py` | Public YAML contract, profiles, thresholds, config hashing | Import Docling. Public keys stay stable across Docling upgrades |
+| `services/parser/models.py` | Shared vocabulary: manifests, inventories, findings, report | Import Docling — a manifest written today must load after an upgrade |
+| `services/parser/normalization.py` | Pure text primitives: folding, tokenising, span diffing | Touch the filesystem or any library — fully unit-testable |
+| `services/parser/preflight.py` | Independent source manifest, page rendering | Use Docling for any measurement |
+| `services/parser/profiles.py` | Deciding *which* profile to use, from preflight evidence | Construct any Docling object |
+| `services/parser/converter.py` | **All** Docling option/converter construction, conversion, canonical JSON | Decide artifact layout |
+| `services/parser/inventory.py` | Structural counting of a converted `DoclingDocument` | Run a conversion |
+| `services/parser/exporters.py` | Picture classification, asset writing, Markdown post-processing | Invent content |
+| `services/parser/artifacts.py` | Immutable run dirs, run manifest, JSONL log | Know what a "page" is |
+| `services/parser/validation/*` | Checks with severity + evidence + threshold + remediation | Mutate artifacts |
+| `services/parser/service.py` | `ParserService` — orders the steps above for one PDF | Parse anything itself |
+| `pipelines/parsing_pipeline.py` | Thin orchestration wrapper | Contain parser-domain logic |
+| `api/cli.py` | Presentation, logging configuration, exit codes | Contain logic worth testing separately |
+| `utils/paths.py`, `utils/hashing.py`, `utils/logging.py` | Generic, service-agnostic helpers | Import from any service |
 
-A test (`test_package_hygiene.py::test_docling_imports_are_confined`) fails the
-build if a Docling import appears outside the modules designed to absorb that
-churn.
+A test (`tests/unit/test_architecture.py::TestPackageIsSelfContained::test_docling_imports_are_confined`)
+fails the build if a Docling import appears outside the modules designed to
+absorb that churn, and `TestServiceArchitectureBoundaries` enforces the
+`api -> pipelines -> services -> utils` dependency direction. See
+[`docs/architecture/service_architecture.md`](architecture/service_architecture.md)
+for the full service-oriented picture, including the future `clients`,
+`databases`, `prompts` and `services/chunker` boundaries.
 
 ## Three decisions worth explaining
 
@@ -136,7 +148,7 @@ a run.
 ## Artifact layout
 
 ```text
-artifacts/<source_stem>/<UTC-timestamp>-<sha8>/
+data/output/parser/<source_stem>/<UTC-timestamp>-<sha8>/
 ├── run_manifest.json                 source hash · config hash · profile + reason
 │                                     · versions · timings · SHA-256 of every artifact
 ├── source/manifest.json              independent preflight inventory
@@ -166,7 +178,10 @@ derived from it must never steer a write into `~/.ssh`.
 * **New output format** — add an exporter; nothing else changes.
 * **New validation check** — return a `CheckResult`; the report aggregates and
   the status logic gates it automatically.
-* **Docling upgrade** — edit `pipeline_factory.py`. Stored manifests and user
-  YAML stay valid because the public config keys are independent.
-* **Service deployment** — wrap `run_pipeline()`. See
-  [productionization_options.md](productionization_options.md).
+* **Docling upgrade** — edit `services/parser/converter.py`. Stored manifests
+  and user YAML stay valid because the public config keys are independent.
+* **Service deployment** — wrap `pipelines.parsing_pipeline.run_parsing_pipeline()`.
+  See [productionization_options.md](productionization_options.md).
+* **New capability (chunking, embedding, ...)** — add a sibling under
+  `services/`, orchestrated by its own `pipelines/*_pipeline.py`. See
+  [architecture/service_architecture.md](architecture/service_architecture.md#how-to-add-a-new-service).

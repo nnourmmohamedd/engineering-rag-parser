@@ -10,9 +10,9 @@ OCR.
 
 Usage:
     python scripts/ocr/validate_ocr_run.py \
-        --run artifacts/scanned_docling_test_image_only/<run-id> \
-        --ground-truth artifacts/ocr_validation/ground_truth_manifest.json \
-        --output artifacts/ocr_validation/<run-id>_ocr_validation.json
+        --run data/output/parser/scanned_docling_test_image_only/<run-id> \
+        --ground-truth data/output/ocr_validation/ground_truth_manifest.json \
+        --output data/output/ocr_validation/<run-id>_ocr_validation.json
 """
 
 from __future__ import annotations
@@ -22,15 +22,15 @@ import json
 from pathlib import Path
 from typing import Any
 
-from engineering_rag_parser.normalization import (
+from engineering_rag.services.parser.converter import reload_document_json
+from engineering_rag.services.parser.normalization import (
     critical_tokens as extract_critical_tokens,
 )
-from engineering_rag_parser.normalization import (
+from engineering_rag.services.parser.normalization import (
     normalize_for_compare,
     token_recall,
     word_tokens,
 )
-from engineering_rag_parser.parser import reload_document_json
 
 
 def _load_ground_truth(path: Path) -> dict[str, Any]:

@@ -89,29 +89,37 @@ real-world scans.
 
 ## Architecture
 
+The package is organised as services (`engineering_rag.services.*`), each with an isolated,
+production-complete implementation, orchestrated by a thin pipeline layer and exposed through a
+CLI — see [`docs/architecture/service_architecture.md`](docs/architecture/service_architecture.md)
+for the full picture, including the future chunker/client/database/prompt boundaries.
+
 ```text
-inspect_source()        preflight.py       independent baseline (pypdf / pdfminer.six / pypdfium2)
+inspect_source()        services/parser/preflight.py    independent baseline (pypdf / pdfminer.six / pypdfium2)
         │
         ▼
-choose_profile()        pipeline_factory.py  evidence-based profile + audited reason
+choose_profile()        services/parser/profiles.py     evidence-based profile + audited reason
         │
         ▼
-convert_pdf()           parser.py          Docling conversion, status/partial handling
+convert_pdf()           services/parser/converter.py    Docling conversion, status/partial handling
         │
-        ├── save_document_json()           canonical JSON (Docling serializer, REFERENCED images)
+        ├── save_document_json()                        canonical JSON (Docling serializer, REFERENCED images)
         │
         ├── export_assets() ──────────────► assets/pictures/*.png, assets/pages/*.png
-        │   export_markdown()  exporters.py  markdown/document.md
+        │   export_markdown()  services/parser/exporters.py  markdown/document.md
         │
         ▼
-validation/             coverage · structure · markdown · visual · report
+services/parser/validation/   source · structure · markdown · visual · report
         │
         ▼
-RunDirectory            artifacts.py       immutable run dir + run_manifest.json
+RunDirectory            services/parser/artifacts.py    immutable run dir + run_manifest.json
 ```
 
-All Docling imports live in `pipeline_factory.py` and `parser.py`. `config.py` exposes a stable
-public key set so a Docling upgrade never invalidates a stored manifest or a user's YAML.
+`services/parser/service.py::ParserService` orders these steps; `pipelines/parsing_pipeline.py`
+is the thin entry point the CLI (`api/cli.py`) and any future adapter call. All Docling imports
+live in `services/parser/{converter,inventory,exporters}.py` and `services/parser/validation/
+{structure,visual}.py`. `services/parser/config.py` exposes a stable public key set so a Docling
+upgrade never invalidates a stored manifest or a user's YAML.
 
 ---
 
@@ -228,8 +236,8 @@ Other subcommands:
 ```bash
 engrag-parse inspect  --input data/input/Instrumentation-and-Control-Engineering.pdf   # preflight only
 engrag-parse run      --input ... --config configs/auto.yaml --json                    # machine-readable
-engrag-parse validate --run artifacts/<stem>/<run-id> --strict                         # re-gate in CI
-engrag-parse show     --run artifacts/<stem>/<run-id>                                  # summarise a run
+engrag-parse validate --run data/output/parser/<stem>/<run-id> --strict                # re-gate in CI
+engrag-parse show     --run data/output/parser/<stem>/<run-id>                         # summarise a run
 engrag-parse --help
 ```
 
@@ -240,7 +248,7 @@ Exit codes: `0` pass (or pass-with-warnings), `1` validation FAIL, `2` input rej
 
 ## Output tree
 
-Each run creates an immutable directory `artifacts/<source_stem>/<UTC-timestamp>-<sha8>/`:
+Each run creates an immutable directory `data/output/parser/<source_stem>/<UTC-timestamp>-<sha8>/`:
 
 | Path | Meaning |
 |---|---|
@@ -259,7 +267,9 @@ Each run creates an immutable directory `artifacts/<source_stem>/<UTC-timestamp>
 | `logs/run.jsonl` | Structured event log, one JSON object per line |
 
 Runs never overwrite each other (`mkdir(exist_ok=False)`), and every artifact write is path-checked
-against the run root.
+against the run root. `--artifacts` on `run` overrides the output root when needed (including writing
+into a pre-existing `artifacts/` directory from before the service-architecture restructure); `validate`
+and `show` accept any existing run directory via `--run`, wherever it lives.
 
 ---
 
@@ -301,7 +311,7 @@ with a flagged unrecovered table is a more honest and more useful result than a 
 ```bash
 pytest -m "not slow"                 # fast: unit + integration + hygiene + CLI (~30s-1min)
 pytest -m slow                       # full acceptance run on the real PDF (~1-5 min)
-pytest -m "not slow" --cov=engineering_rag_parser --cov-report=term-missing  # with coverage
+pytest -m "not slow" --cov=engineering_rag --cov-report=term-missing         # with coverage
 
 ruff check .                         # lint
 ruff format --check .                # formatting
@@ -373,10 +383,13 @@ UTF-8 with LF regardless.
 
 | Document | Contents |
 |---|---|
-| [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md) | Authoritative completion report for this hardening pass: defect fixes, quality-gate results, final run identity |
-| [`PROJECT_COMPLETION_AUDIT.md`](PROJECT_COMPLETION_AUDIT.md) | The evidence-based audit this pass was scoped against |
+| [`RESTRUCTURE_COMPLETION_REPORT.md`](RESTRUCTURE_COMPLETION_REPORT.md) | Evidence for the service-architecture restructure: mapping, tests, quality gates, acceptance runs |
+| [`docs/architecture/service_architecture.md`](docs/architecture/service_architecture.md) | The service-oriented architecture: every package, dependency direction, how to add a new service |
+| [`docs/architecture/service_restructure_plan.md`](docs/architecture/service_restructure_plan.md) | The migration plan the restructure followed, with the complete old→new module mapping |
+| [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md) | Authoritative completion report for the parsing milestone: defect fixes, quality-gate results, OCR verification |
+| [`PROJECT_COMPLETION_AUDIT.md`](PROJECT_COMPLETION_AUDIT.md) | The evidence-based audit the parsing-milestone hardening pass was scoped against |
 | [`docs/FINAL_IMPLEMENTATION_REPORT.md`](docs/FINAL_IMPLEMENTATION_REPORT.md) | Measured results, all 27 pages, verified vs unresolved |
-| [`docs/architecture.md`](docs/architecture.md) | Module responsibilities and data flow |
+| [`docs/architecture.md`](docs/architecture.md) | Module responsibilities and data flow (parser service internals) |
 | [`docs/docling_parameter_guide.md`](docs/docling_parameter_guide.md) | Every option: Docling field, default, chosen value, trade-off |
 | [`docs/validation_methodology.md`](docs/validation_methodology.md) | What each check proves and, importantly, what it does not |
 | [`docs/productionization_options.md`](docs/productionization_options.md) | Four deployment options compared; choice justified; ingestion contract |
@@ -386,7 +399,7 @@ UTF-8 with LF regardless.
 Reproduce the determinism check between two runs:
 
 ```bash
-python docs/_generated/determinism_check.py artifacts/<stem>/<run-a> artifacts/<stem>/<run-b>
+python docs/_generated/determinism_check.py data/output/parser/<stem>/<run-a> data/output/parser/<stem>/<run-b>
 ```
 
 Regenerate the Docling parameter guide after an upgrade:

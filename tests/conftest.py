@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from engineering_rag_parser.config import ParserConfig
+from engineering_rag.services.parser.config import ParserConfig
 
 ACCEPTANCE_PDF = Path("data/input/Instrumentation-and-Control-Engineering.pdf")
 
