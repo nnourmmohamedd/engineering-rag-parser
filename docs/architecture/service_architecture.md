@@ -87,12 +87,12 @@ from engineering_rag.services.parser import ParserConfig, ParserRequest, ParserR
 request = ParserRequest(pdf_path=Path("data/input/doc.pdf"), config=ParserConfig())
 result: ParserResult = ParserService().run(request)
 
-result.status        # RunStatus.PASS | PASS_WITH_WARNINGS | FAIL
-result.run_dir        # Path to the immutable run directory
-result.report          # ValidationReport — checks, evidence, human_review_items
-result.manifest          # SourceManifest — the independent preflight baseline
-result.timings             # per-stage wall-clock seconds
-result.exit_code             # 0 or 1, for a CLI/CI caller
+result.status  # RunStatus.PASS | PASS_WITH_WARNINGS | FAIL
+result.run_dir  # Path to the immutable run directory
+result.report  # ValidationReport — checks, evidence, human_review_items
+result.manifest  # SourceManifest — the independent preflight baseline
+result.timings  # per-stage wall-clock seconds
+result.exit_code  # 0 or 1, for a CLI/CI caller
 ```
 
 Callers outside `services/parser` should depend on this surface
@@ -149,6 +149,7 @@ other module only ever does:
 
 ```python
 import logging
+
 logger = logging.getLogger(__name__)
 ```
 
