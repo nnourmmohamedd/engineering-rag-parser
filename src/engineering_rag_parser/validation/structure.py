@@ -393,8 +393,37 @@ def table_checks(
                 "asset_exists": asset_exists,
                 "warning_in_markdown": flagged,
                 "asset_linked_in_markdown": linked,
+                "source": "table_region",
             }
         )
+
+    # A labelled table whose body Docling classified as a PICTURE rather than a
+    # table (Table 3 on the acceptance document) is not a `TableFinding` at all,
+    # so it is invisible to the loop above. `flag_table_only_pictures` marks
+    # exactly these; without this block D-5 stood: such a table's preservation
+    # was asserted only by `labelled_tables_located`, which never checked that a
+    # warning was actually written into the Markdown.
+    for picture in pictures:
+        if not picture.represents_table_label:
+            continue
+        asset_rel = picture.asset_path
+        asset_exists = asset_rel is not None and run_root is not None and (run_root / asset_rel).is_file()
+        label = picture.represents_table_label
+        flagged = ("Unrecovered table" in markdown_text) and (label in markdown_text)
+        linked = asset_rel is not None and asset_rel in markdown_text
+        preservation.append(
+            {
+                "table_index": None,
+                "page_no": picture.page_no,
+                "label": label,
+                "asset_path": asset_rel,
+                "asset_exists": asset_exists,
+                "warning_in_markdown": flagged,
+                "asset_linked_in_markdown": linked,
+                "source": "picture_region",
+            }
+        )
+
     unpreserved = [p for p in preservation if not (p["asset_exists"] and p["warning_in_markdown"])]
     checks.append(
         CheckResult(

@@ -44,6 +44,23 @@ dependencies = [
 ocr = ["easyocr>=1.7"]
 # Local VLM picture description (ADR-005). Off by default; see the parameter guide.
 vlm = ["transformers>=4.45", "accelerate>=1.0"]
+# Development tooling. Duplicated (deliberately) into [dependency-groups] below:
+# `pip install -e ".[dev]"` works on every supported pip version, while
+# `pip install -e . --group dev` (PEP 735, pip >= 25.1) is the modern equivalent.
+# Keep the two lists in sync; `test_dependency_group_parity` enforces it.
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "ruff>=0.8",
+  "mypy>=1.13",
+  "types-PyYAML",
+  "reportlab>=4.2",       # builds the synthetic fixture PDFs (BSD-3-Clause)
+  "ipykernel>=6.29",
+  "jupyter>=1.1",
+  "nbformat>=5.10",
+  "nbclient>=0.10",
+  "build>=1.2",
+]
 
 [dependency-groups]
 dev = [
@@ -55,6 +72,9 @@ dev = [
   "reportlab>=4.2",       # builds the synthetic fixture PDFs (BSD-3-Clause)
   "ipykernel>=6.29",
   "jupyter>=1.1",
+  "nbformat>=5.10",
+  "nbclient>=0.10",
+  "build>=1.2",
 ]
 
 [project.scripts]

@@ -8,6 +8,7 @@ Docling model weights are not cached.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -65,6 +66,29 @@ class TestPipelineFactory:
 
     def test_effective_options_are_serialisable(self) -> None:
         json.dumps(describe_effective_options(ParserConfig()))
+
+    def test_table_structure_options_records_concrete_fields(self) -> None:
+        """Regression for D-2: the manifest must not record `table_structure_options: {}`.
+
+        `PdfPipelineOptions.model_dump()` serialises this field by its declared
+        (abstract) type, dropping the concrete subclass's `mode`/`do_cell_matching`
+        fields. `describe_effective_options` must re-serialise it from the live
+        object so the manifest reflects the runtime configuration.
+        """
+        cfg = resolve_profile_config(ParserConfig(), Profile.HIGH_FIDELITY)
+        info = describe_effective_options(cfg)
+        table_opts = info["pipeline_options"]["table_structure_options"]
+        assert table_opts["type"] == "TableStructureOptions"
+        assert table_opts["mode"] == "accurate"
+        assert table_opts["do_cell_matching"] is True
+
+    def test_ocr_options_records_concrete_fields_when_enabled(self) -> None:
+        cfg = resolve_profile_config(ParserConfig(), Profile.SCANNED)
+        info = describe_effective_options(cfg)
+        ocr_opts = info["pipeline_options"]["ocr_options"]
+        assert ocr_opts is not None
+        assert ocr_opts["type"]
+        assert ocr_opts != {}
 
 
 class TestAutoProfile:
@@ -199,3 +223,11 @@ class TestEndToEndOnSyntheticPdf:
         result, _ = run_result
         assert result.report.tables, "no table detected in the synthetic fixture"
         assert any(t.num_cells > 0 for t in result.report.tables)
+
+    def test_json_image_uris_use_portable_separators(self, run_result) -> None:
+        """Regression for D-3: no image URI in the canonical JSON may contain a backslash."""
+        result, _ = run_result
+        text = (result.run_dir / "docling" / "document.json").read_text(encoding="utf-8")
+        for match in re.finditer(r'"uri"\s*:\s*"((?:[^"\\]|\\.)*)"', text):
+            value = match.group(1)
+            assert "\\\\" not in value, f"non-portable URI in document.json: {value!r}"

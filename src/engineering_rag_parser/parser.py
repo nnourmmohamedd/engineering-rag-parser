@@ -9,6 +9,7 @@ directory and the run is marked ``FAIL``.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import Counter
 from dataclasses import dataclass, field
@@ -177,6 +178,31 @@ def convert_pdf(pdf_path: Path, config: ParserConfig) -> ConversionOutcome:
 #: layout into a portable artifact, so a bare relative name is required here.
 _JSON_ASSET_DIRNAME = "assets"
 
+#: Matches a JSON string value under a ``"uri"`` key, honouring JSON's own
+#: backslash-escaping (``\\`` for a literal backslash, ``\"`` for a quote)
+#: so the match stops at the real closing quote rather than an escaped one.
+_URI_FIELD_RE = re.compile(r'("uri"\s*:\s*")((?:[^"\\]|\\.)*)(")')
+
+
+def _portabalize_json_uris(text: str) -> str:
+    """Rewrite Windows-backslash path separators in JSON ``"uri"`` values to ``/``.
+
+    Docling's own serialiser writes the OS-native separator for the local
+    relative asset paths it emits (``ImageRefMode.REFERENCED``). On Windows
+    that means literal ``\\`` inside the JSON string, which is not a path
+    separator on POSIX — the artifact would not resolve on Linux/macOS
+    (audit finding D-3). Remote ``http(s)``/``data:`` URIs never contain a
+    backslash and are left untouched by construction.
+    """
+
+    def _fix(match: re.Match[str]) -> str:
+        prefix, value, suffix = match.group(1), match.group(2), match.group(3)
+        if "\\\\" not in value:
+            return match.group(0)
+        return f"{prefix}{value.replace(chr(92) * 2, '/')}{suffix}"
+
+    return _URI_FIELD_RE.sub(_fix, text)
+
 
 def save_document_json(document: DoclingDocument, dest: Path) -> Path:
     """Serialise the DoclingDocument with Docling's own serialiser.
@@ -185,6 +211,11 @@ def save_document_json(document: DoclingDocument, dest: Path) -> Path:
     base64 payload per picture would bloat the JSON into the tens of megabytes
     and make diffing a run impossible. Assets are written to
     ``<dest.parent>/assets/`` and referenced by relative URI.
+
+    The file is post-processed to normalise any Windows path separator inside
+    a ``"uri"`` value to a portable forward slash (D-3), then re-validated by
+    reloading it back through the DoclingDocument model so a broken rewrite
+    can never be shipped silently.
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
     document.save_as_json(
@@ -193,6 +224,11 @@ def save_document_json(document: DoclingDocument, dest: Path) -> Path:
         image_mode=ImageRefMode.REFERENCED,
         indent=2,
     )
+    original = dest.read_text(encoding="utf-8")
+    portable = _portabalize_json_uris(original)
+    if portable != original:
+        dest.write_text(portable, encoding="utf-8", newline="\n")
+        DoclingDocument.load_from_json(dest)  # fail loudly if the rewrite broke the JSON
     return dest
 
 
@@ -273,9 +309,12 @@ def build_inventory(document: DoclingDocument) -> DocumentInventory:
                 page_inv.headings += 1
         elif label in _LIST_LABELS:
             inv.list_items += 1
-            # Docling marks an ordered item by giving it a non-empty enumeration marker.
-            marker = (getattr(item, "marker", "") or "").strip()
-            if marker and marker not in {"-", "*", "•"}:
+            # `ListItem.enumerated` is the structural field Docling's own Markdown
+            # serializer uses to decide "1." vs "-"; it is set per-item (so mixed
+            # and nested lists are handled correctly) and does not depend on
+            # guessing intent from the `marker` string, which is frequently "-"
+            # even for enumerated items (D-6).
+            if bool(getattr(item, "enumerated", False)):
                 inv.ordered_list_items += 1
             else:
                 inv.unordered_list_items += 1

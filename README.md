@@ -142,6 +142,23 @@ pip install -e ".[ocr]"   # EasyOCR — only for genuinely scanned documents
 pip install -e ".[vlm]"   # local VLM picture description (off by default, see ADR-005)
 ```
 
+### Reproducible installation (lockfile)
+
+`requirements.lock` captures the exact dependency closure verified in the
+reference environment (see the header of the file for the full rationale and
+regeneration commands):
+
+```powershell
+python -m pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+python -m pip install -r requirements.lock
+python -m pip install -e . --no-deps
+```
+
+The flexible-range install above (`pip install -e ".[dev]"`) is also fully
+supported and is what CI uses; the lockfile is for byte-for-byte reproduction
+of the verified environment when that matters more than picking up patch
+releases.
+
 ### VS Code + Jupyter
 
 1. **Ctrl+Shift+P → Python: Select Interpreter → `./.venv/Scripts/python.exe`**
@@ -259,28 +276,25 @@ with a flagged unrecovered table is a more honest and more useful result than a 
 ## Tests, lint, types
 
 ```bash
-pytest -m "not slow"                 # 168 tests: unit + integration + hygiene (~1 min)
-pytest -m slow                       # 33 tests: full acceptance run on the real PDF (~3 min)
-pytest --cov=engineering_rag_parser  # with coverage
+pytest -m "not slow"                 # fast: unit + integration + hygiene + CLI (~30s-1min)
+pytest -m slow                       # full acceptance run on the real PDF (~1-5 min)
+pytest -m "not slow" --cov=engineering_rag_parser --cov-report=term-missing  # with coverage
 
 ruff check .                         # lint
 ruff format --check .                # formatting
 mypy src                             # types (17 modules, strict-ish)
+python -m build --wheel              # package build
 ```
 
-Verified results on the reference environment:
-
-```text
-ruff check .            All checks passed!
-ruff format --check .   40 files already formatted
-mypy src                Success: no issues found in 17 source files
-pytest -m "not slow"    168 passed, 33 deselected
-pytest -m slow          33 passed, 168 deselected
-```
+Exact results, commands and counts (including coverage) are recorded per run in
+[`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md) rather than transcribed here, so this
+file cannot drift out of date with the actual numbers.
 
 The slow acceptance test skips itself with an explicit reason when the PDF is absent, so a fresh
-clone still has a green suite. CI uses only synthetic fixtures — the supplied PDF and everything
-extracted from it are git-ignored and never uploaded.
+clone still has a green suite. [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the fast
+suite plus lint/type/build checks on every push, using only synthetic ReportLab-generated fixtures —
+the supplied PDF and everything extracted from it are git-ignored and never uploaded or referenced by
+CI.
 
 ---
 
@@ -333,6 +347,8 @@ UTF-8 with LF regardless.
 
 | Document | Contents |
 |---|---|
+| [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md) | Authoritative completion report for this hardening pass: defect fixes, quality-gate results, final run identity |
+| [`PROJECT_COMPLETION_AUDIT.md`](PROJECT_COMPLETION_AUDIT.md) | The evidence-based audit this pass was scoped against |
 | [`docs/FINAL_IMPLEMENTATION_REPORT.md`](docs/FINAL_IMPLEMENTATION_REPORT.md) | Measured results, all 27 pages, verified vs unresolved |
 | [`docs/architecture.md`](docs/architecture.md) | Module responsibilities and data flow |
 | [`docs/docling_parameter_guide.md`](docs/docling_parameter_guide.md) | Every option: Docling field, default, chosen value, trade-off |

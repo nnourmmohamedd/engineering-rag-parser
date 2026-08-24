@@ -273,16 +273,35 @@ def _check_block(block: list[str], start_line: int) -> list[dict[str, Any]]:
     return []
 
 
+_URI_VALUE_RE = re.compile(r'"uri"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+def _non_portable_uris(raw_text: str) -> list[str]:
+    """URI values that contain a literal backslash and are not a remote URL.
+
+    A backslash is a valid filename character on POSIX, so a Windows-style
+    relative path (``assets\\image_….png``) silently fails to resolve there
+    (audit finding D-3). Remote ``http(s)``/``data:`` URIs never contain one.
+    """
+    hits: list[str] = []
+    for match in _URI_VALUE_RE.finditer(raw_text):
+        value = match.group(1)
+        if "\\\\" in value and not value.startswith(("http://", "https://", "data:")):
+            hits.append(value)
+    return hits
+
+
 def json_checks(
     json_path: Path, reload_ok: bool, reload_error: str | None, roundtrip: dict[str, Any]
 ) -> list[CheckResult]:
     """Validate the serialised DoclingDocument artifact."""
     checks: list[CheckResult] = []
 
+    raw_text = json_path.read_text(encoding="utf-8") if json_path.exists() else ""
     parse_error: str | None = None
     payload: Any = None
     try:
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        payload = json.loads(raw_text)
     except Exception as exc:  # noqa: BLE001
         parse_error = str(exc)
 
@@ -316,6 +335,24 @@ def json_checks(
             evidence={"error": reload_error},
             threshold={"required": "DoclingDocument.load_from_json succeeds"},
             remediation="A file that will not reload is not a usable handoff to the chunking stage.",
+        )
+    )
+
+    non_portable = _non_portable_uris(raw_text) if parse_error is None else []
+    checks.append(
+        CheckResult(
+            check_id="json_portable_paths",
+            title="document.json image URIs use portable forward-slash separators",
+            passed=not non_portable,
+            severity=Severity.CRITICAL,
+            gate=True,
+            summary="All URI values are portable."
+            if not non_portable
+            else f"{len(non_portable)} URI value(s) contain a Windows backslash separator.",
+            evidence={"count": len(non_portable), "sample": non_portable[:10]},
+            threshold={"required": "no backslash in any relative URI value"},
+            remediation="Backslashes are literal filename characters on POSIX; normalise to '/' after "
+            "Docling's own serialiser writes the file.",
         )
     )
 

@@ -22,15 +22,31 @@ from docling.datamodel.pipeline_options import (
 
 from engineering_rag_parser.config import Profile, load_config
 from engineering_rag_parser.pipeline_factory import (
+    _describe_suboption,
     build_pipeline_options,
     docling_versions,
     resolve_profile_config,
 )
 
-STOCK = PdfPipelineOptions().model_dump(mode="json")
+
+def _dumped(pipeline: PdfPipelineOptions) -> dict[str, object]:
+    """Dump with the same subclass-aware fix as `describe_effective_options` (D-2).
+
+    `PdfPipelineOptions.model_dump()` alone serialises `table_structure_options`
+    / `ocr_options` by their declared abstract-base field type, dropping the
+    concrete subclass's fields — this guide must not regenerate the `{}`
+    artefact the audit found.
+    """
+    dumped = pipeline.model_dump(mode="json")
+    dumped["table_structure_options"] = _describe_suboption(pipeline.table_structure_options)
+    dumped["ocr_options"] = _describe_suboption(pipeline.ocr_options)
+    return dumped
+
+
+STOCK = _dumped(PdfPipelineOptions())
 HF = load_config("configs/high_fidelity.yaml")
 HF_EFF = resolve_profile_config(HF, Profile.HIGH_FIDELITY)
-CHOSEN = build_pipeline_options(HF_EFF).model_dump(mode="json")
+CHOSEN = _dumped(build_pipeline_options(HF_EFF))
 VERSIONS = docling_versions()
 
 

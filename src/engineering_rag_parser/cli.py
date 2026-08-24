@@ -8,6 +8,7 @@ for automation, and ``run``/``validate`` exit non-zero on ``FAIL``.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import sys
@@ -24,6 +25,26 @@ from .config import ParserConfig, Profile, load_config
 from .domain import RunStatus, Severity, ValidationReport
 from .pipeline import run_pipeline
 from .preflight import PreflightError, inspect_source
+
+
+def _force_utf8_streams() -> None:
+    """Reconfigure stdout/stderr to UTF-8 so console output never crashes the CLI.
+
+    A Windows console running a legacy non-UTF-8 codepage (e.g. cp1256) cannot
+    encode characters Rich writes by default (an arrow in the status line, a
+    warning icon) and raises an unhandled `UnicodeEncodeError` straight out of
+    the terminal renderer — turning a routine `validate --strict` into a stack
+    trace instead of the intended exit code. `errors="replace"` degrades a
+    handful of glyphs to `?` rather than crashing the process.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(ValueError, OSError):  # stream not reconfigurable
+                reconfigure(encoding="utf-8", errors="replace")
+
+
+_force_utf8_streams()
 
 app = typer.Typer(
     name="engrag-parse",

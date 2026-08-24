@@ -10,6 +10,8 @@ import pytest
 from engineering_rag_parser.config import ParserConfig
 from engineering_rag_parser.domain import (
     FurnitureCandidate,
+    PictureFinding,
+    Severity,
     SourceManifest,
     SourcePage,
 )
@@ -17,8 +19,10 @@ from engineering_rag_parser.exporters import (
     _normalize_whitespace,
     _overlap_fraction,
     _strip_repeated_furniture_lines,
+    flag_table_only_pictures,
 )
 from engineering_rag_parser.normalization import normalize_line
+from engineering_rag_parser.parser import _portabalize_json_uris
 from engineering_rag_parser.preflight import PreflightError, inspect_source
 
 
@@ -196,3 +200,66 @@ class TestPreflightEdgeCases:
         manifest = inspect_source(image_only_pdf, cfg)
         assert manifest.pages[0].is_image_heavy is False
         assert manifest.pages[0].needs_visual_review is True
+
+
+def _picture(
+    caption: str, classification: str = "substantive", asset_path: str | None = "a.png"
+) -> PictureFinding:
+    return PictureFinding(
+        picture_index=0,
+        self_ref="#/pictures/0",
+        page_no=5,
+        caption=caption,
+        classification=classification,  # type: ignore[arg-type]
+        asset_path=asset_path,
+    )
+
+
+class TestFlagTableOnlyPictures:
+    """Regression tests for D-5: a labelled table whose body is a *picture*, not a table region."""
+
+    def test_flags_substantive_picture_whose_caption_names_a_known_table(self) -> None:
+        findings = [_picture("Table 3: Installation Drawings")]
+        flag_table_only_pictures(findings, {3: {"page_no": 5, "title": "Installation Drawings"}})
+        assert findings[0].represents_table_label == "Table 3"
+        assert findings[0].severity is Severity.CRITICAL
+        assert any("Table 3" in n for n in findings[0].notes)
+
+    def test_ignores_unrelated_caption(self) -> None:
+        findings = [_picture("Figure 1: Loop diagram")]
+        flag_table_only_pictures(findings, {3: {"page_no": 5, "title": "x"}})
+        assert findings[0].represents_table_label is None
+
+    def test_ignores_decorative_pictures_even_with_matching_caption(self) -> None:
+        findings = [_picture("Table 3: Installation Drawings", classification="decorative_repeated")]
+        flag_table_only_pictures(findings, {3: {"page_no": 5, "title": "x"}})
+        assert findings[0].represents_table_label is None
+
+    def test_ignores_a_table_number_not_in_the_located_labels(self) -> None:
+        findings = [_picture("Table 9: Unrelated")]
+        flag_table_only_pictures(findings, {3: {"page_no": 5, "title": "x"}})
+        assert findings[0].represents_table_label is None
+
+
+class TestPortabalizeJsonUris:
+    """Regression tests for D-3: Windows backslash separators in JSON `"uri"` values."""
+
+    def test_normalizes_windows_separator(self) -> None:
+        text = '{"uri": "assets\\\\image_000.png"}'
+        out = _portabalize_json_uris(text)
+        assert out == '{"uri": "assets/image_000.png"}'
+
+    def test_leaves_forward_slash_paths_untouched(self) -> None:
+        text = '{"uri": "assets/image_000.png"}'
+        assert _portabalize_json_uris(text) == text
+
+    def test_leaves_remote_urls_untouched(self) -> None:
+        text = '{"uri": "https://example.com/a.png"}'
+        assert _portabalize_json_uris(text) == text
+
+    def test_normalizes_multiple_occurrences(self) -> None:
+        text = '{"a": {"uri": "x\\\\y.png"}, "b": {"uri": "p\\\\q.png"}}'
+        out = _portabalize_json_uris(text)
+        assert "\\\\" not in out
+        assert '"uri": "x/y.png"' in out
+        assert '"uri": "p/q.png"' in out

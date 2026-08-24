@@ -16,7 +16,13 @@ from typing import Any
 from .artifacts import JsonlLogger, RunDirectory, build_run_manifest
 from .config import ParserConfig
 from .domain import RunStatus, SourceManifest, ValidationReport
-from .exporters import classify_pictures, export_assets, export_markdown, find_table_labels
+from .exporters import (
+    classify_pictures,
+    export_assets,
+    export_markdown,
+    find_table_labels,
+    flag_table_only_pictures,
+)
 from .parser import (
     ConversionFailedError,
     build_inventory,
@@ -143,6 +149,7 @@ def run_pipeline(
     native_texts = native_page_texts(pdf_path, config)
     table_labels = find_table_labels(document, native_texts)
     logger.info("Labelled tables located: %s", {n: f"page {v['page_no']}" for n, v in table_labels.items()})
+    picture_findings = flag_table_only_pictures(picture_findings, table_labels)
 
     export = export_markdown(
         document, run, effective_config, manifest, picture_findings, page_images, table_labels

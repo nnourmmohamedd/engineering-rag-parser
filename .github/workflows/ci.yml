@@ -1,0 +1,104 @@
+name: CI
+
+# Runs only against synthetic, ReportLab-generated fixtures (see tests/conftest.py).
+# The acceptance PDF (data/input/Instrumentation-and-Control-Engineering.pdf) and
+# everything derived from it are git-ignored and are never present in this
+# workflow's checkout, so nothing confidential is built, uploaded or cached here.
+# `tests/integration/test_acceptance_document.py` self-skips with an explicit
+# reason whenever the file is absent (see the `acceptance_pdf` fixture).
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# Running on Linux (rather than mirroring the Windows dev environment) is a
+# deliberate part of the coverage this workflow adds: audit finding D-3 was a
+# Windows-only backslash path separator that resolved silently on Windows and
+# would have failed on POSIX. A Linux CI run is the cheapest way to keep that
+# class of defect from coming back unnoticed.
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # A small, justified matrix rather than the full 3.10-3.13 range this
+        # project declares support for (see pyproject.toml `requires-python`):
+        # 3.11 is the floor of Docling's own actively-tested range and 3.13 is
+        # the version this project was developed and acceptance-tested on.
+        # 3.10/3.12 compatibility is asserted by `requires-python` but not
+        # exercised on every push to keep CI minutes proportionate to a
+        # single-maintainer project.
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install CPU-only PyTorch first
+        # Mirrors the documented setup: pin to the CPU wheel index before the
+        # editable install resolves torch, so CI never pulls a multi-GB CUDA
+        # build it cannot use.
+        run: python -m pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+
+      - name: Install the project with dev tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: mypy
+        run: mypy src
+
+      - name: Fast tests with coverage
+        # `-m "not slow"` excludes only the full-document acceptance suite
+        # (tests/integration/test_acceptance_document.py), which additionally
+        # self-skips without the confidential PDF. `integration` tests that
+        # need cached Docling model weights self-skip too on a cold runner
+        # (see `requires_docling_models` in tests/conftest.py) rather than
+        # failing, so this step never depends on a model download succeeding.
+        # This runner has no cached Docling model weights, so every test gated
+        # by `requires_docling_models` (conversion end-to-end, most CLI tests)
+        # self-skips rather than downloading hundreds of MB on every job.
+        # Measured coverage is therefore ~58% cold vs ~84% with a warm model
+        # cache (see PARSER_STAGE_FINAL_REPORT.md for both numbers) — 55% is
+        # set just below the measured cold-cache floor, not an invented target.
+        run: |
+          python -m pytest -m "not slow" \
+            --cov=engineering_rag_parser --cov-report=term-missing --cov-report=xml \
+            --cov-fail-under=55
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+        if: always()
+
+      - name: Notebook is structurally valid
+        run: |
+          python -c "import nbformat; nbformat.validate(nbformat.read('notebooks/01_docling_exploration.ipynb', as_version=4))"
+
+      - name: Build the wheel
+        run: python -m build --wheel
+
+      - name: Wheel contains no PDF or extracted content
+        shell: bash
+        run: |
+          python -c "
+          import zipfile, sys, glob
+          path = glob.glob('dist/*.whl')[0]
+          names = zipfile.ZipFile(path).namelist()
+          bad = [n for n in names if n.endswith('.pdf') or n.startswith('artifacts/')]
+          sys.exit(1) if bad else None
+          "

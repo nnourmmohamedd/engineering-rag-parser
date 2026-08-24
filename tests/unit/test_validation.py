@@ -9,10 +9,12 @@ from engineering_rag_parser.config import ParserConfig
 from engineering_rag_parser.domain import (
     CheckResult,
     DocumentInventory,
+    PictureFinding,
     RunStatus,
     Severity,
     SourceManifest,
     SourcePage,
+    TableFinding,
     ValidationReport,
 )
 from engineering_rag_parser.validation.coverage import (
@@ -21,7 +23,8 @@ from engineering_rag_parser.validation.coverage import (
     document_completeness_check,
     strip_furniture,
 )
-from engineering_rag_parser.validation.markdown import markdown_checks
+from engineering_rag_parser.validation.markdown import json_checks, markdown_checks
+from engineering_rag_parser.validation.structure import table_checks
 
 
 def _check(check_id: str, passed: bool, severity: Severity, gate: bool = False) -> CheckResult:
@@ -256,3 +259,133 @@ class TestMarkdownChecks:
     def test_empty_document_fails(self, tmp_path: Path) -> None:
         checks = self._run(tmp_path, "# T\n")
         assert checks["markdown_non_empty"].passed is False
+
+
+class TestJsonPortablePathsCheck:
+    """Regression tests for D-3's validation gate."""
+
+    def _checks(self, tmp_path: Path, content: str) -> dict[str, CheckResult]:
+        path = tmp_path / "document.json"
+        path.write_text(content, encoding="utf-8")
+        return {c.check_id: c for c in json_checks(path, reload_ok=True, reload_error=None, roundtrip={})}
+
+    def test_backslash_uri_fails_the_gate(self, tmp_path: Path) -> None:
+        checks = self._checks(tmp_path, '{"pictures": [{"image": {"uri": "assets\\\\a.png"}}]}')
+        check = checks["json_portable_paths"]
+        assert check.passed is False
+        assert check.gate is True
+        assert check.evidence["count"] == 1
+
+    def test_forward_slash_uri_passes(self, tmp_path: Path) -> None:
+        checks = self._checks(tmp_path, '{"pictures": [{"image": {"uri": "assets/a.png"}}]}')
+        assert checks["json_portable_paths"].passed is True
+
+    def test_remote_url_is_not_flagged(self, tmp_path: Path) -> None:
+        checks = self._checks(tmp_path, '{"pictures": [{"image": {"uri": "https://example.com/a.png"}}]}')
+        assert checks["json_portable_paths"].passed is True
+
+
+def _picture_finding(represents_table_label: str | None, asset_path: str | None) -> PictureFinding:
+    return PictureFinding(
+        picture_index=0,
+        self_ref="#/pictures/0",
+        page_no=23,
+        caption="Table 3: Installation Drawings",
+        classification="substantive",
+        asset_path=asset_path,
+        represents_table_label=represents_table_label,
+        severity=Severity.CRITICAL if represents_table_label else Severity.INFO,
+    )
+
+
+class TestTableChecksPictureBackedTable:
+    """Regression tests for D-5: a labelled table detected only as a picture region."""
+
+    def test_flagged_picture_with_asset_and_warning_passes_the_no_silent_loss_gate(
+        self, tmp_path: Path
+    ) -> None:
+        asset = tmp_path / "page023-picture096.png"
+        asset.write_bytes(b"\x89PNG")
+        finding = _picture_finding("Table 3", "page023-picture096.png")
+        markdown = (
+            "> **⚠ Unrecovered table — Table 3** (page 23). ...\n\n![Table 3](page023-picture096.png)\n"
+        )
+        checks = {
+            c.check_id: c
+            for c in table_checks(
+                tables=[],
+                table_labels={3: {"page_no": 23, "title": "x", "source": "native_pdf_text"}},
+                config=ParserConfig(),
+                markdown_text=markdown,
+                run_root=tmp_path,
+                pictures=[finding],
+            )
+        }
+        assert checks["unrecovered_content_preserved"].passed is True
+
+    def test_flagged_picture_without_markdown_warning_fails_the_gate(self, tmp_path: Path) -> None:
+        asset = tmp_path / "page023-picture096.png"
+        asset.write_bytes(b"\x89PNG")
+        finding = _picture_finding("Table 3", "page023-picture096.png")
+        checks = {
+            c.check_id: c
+            for c in table_checks(
+                tables=[],
+                table_labels={3: {"page_no": 23, "title": "x", "source": "native_pdf_text"}},
+                config=ParserConfig(),
+                markdown_text="No warning here, just a plain figure reference.",
+                run_root=tmp_path,
+                pictures=[finding],
+            )
+        }
+        assert checks["unrecovered_content_preserved"].passed is False
+
+    def test_unflagged_pictures_do_not_affect_the_gate(self, tmp_path: Path) -> None:
+        finding = _picture_finding(None, "some.png")
+        checks = {
+            c.check_id: c
+            for c in table_checks(
+                tables=[],
+                table_labels={},
+                config=ParserConfig(),
+                markdown_text="",
+                run_root=tmp_path,
+                pictures=[finding],
+            )
+        }
+        assert checks["unrecovered_content_preserved"].passed is True
+
+    def test_table_region_and_picture_region_losses_are_both_covered(self, tmp_path: Path) -> None:
+        """Both D-5 sources of loss (asset_only table, table-labelled picture) feed one gate."""
+        table = TableFinding(
+            table_index=0,
+            self_ref="#/tables/0",
+            page_no=16,
+            detected_label="Table 1",
+            serialization="asset_only",
+            severity=Severity.CRITICAL,
+            notes=["Region preserved as asset: page016-table000.png"],
+        )
+        (tmp_path / "page016-table000.png").write_bytes(b"\x89PNG")
+        picture = _picture_finding("Table 3", "page023-picture096.png")
+        (tmp_path / "page023-picture096.png").write_bytes(b"\x89PNG")
+        markdown = (
+            "> **⚠ Unrecovered table — Table 1** page 16 ...\npage016-table000.png\n"
+            "> **⚠ Unrecovered table — Table 3** page 23 ...\npage023-picture096.png\n"
+        )
+        checks = {
+            c.check_id: c
+            for c in table_checks(
+                tables=[table],
+                table_labels={
+                    1: {"page_no": 16, "title": "x", "source": "native_pdf_text"},
+                    3: {"page_no": 23, "title": "y", "source": "native_pdf_text"},
+                },
+                config=ParserConfig(),
+                markdown_text=markdown,
+                run_root=tmp_path,
+                pictures=[picture],
+            )
+        }
+        assert checks["unrecovered_content_preserved"].passed is True
+        assert len(checks["unrecovered_content_preserved"].evidence["regions"]) == 2

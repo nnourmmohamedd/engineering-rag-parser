@@ -52,6 +52,7 @@ __all__ = [
     "export_assets",
     "export_markdown",
     "find_table_labels",
+    "flag_table_only_pictures",
 ]
 
 logger = logging.getLogger(__name__)
@@ -254,6 +255,40 @@ def find_table_labels(
             consider(text, _page_no(item), "docling_text")
 
     return dict(sorted(labels.items()))
+
+
+def flag_table_only_pictures(
+    picture_findings: list[PictureFinding], table_labels: dict[int, dict[str, Any]]
+) -> list[PictureFinding]:
+    """Mark a substantive picture whose caption is a "Table N:" label as an unrecovered table.
+
+    Docling sometimes classifies a raster table's body as a ``PictureItem``
+    rather than a ``TableItem`` at all — not merely a table region with zero
+    *recovered* cells, but no table region whatsoever (Table 3 on the
+    acceptance document is exactly this case). Without this step such a
+    picture renders as an ordinary figure with no indication that it is,
+    structurally, unrecoverable tabular data (audit finding D-5). Only a
+    picture already classified ``substantive`` and whose own caption names it
+    ("Table 3: ...") is flagged, so a picture that merely appears near a table
+    caption is never mislabelled.
+    """
+    for finding in picture_findings:
+        if finding.classification != "substantive" or not finding.caption:
+            continue
+        match = _TABLE_LABEL_RE.match(finding.caption.strip())
+        if not match:
+            continue
+        number = int(match.group(1))
+        if number not in table_labels:
+            continue
+        label = f"Table {number}"
+        finding.represents_table_label = label
+        finding.severity = Severity.CRITICAL
+        finding.notes.append(
+            f"This picture's caption identifies it as '{label}'. Docling classified the region as a "
+            "picture rather than a table, so it carries no table cells at all, recovered or otherwise."
+        )
+    return picture_findings
 
 
 def export_assets(
@@ -628,7 +663,15 @@ def export_markdown(
             replacements.append("")
             continue
         caption = finding.caption or f"Figure on page {finding.page_no}"
-        if finding.asset_path:
+        if finding.asset_path and finding.represents_table_label:
+            replacements.append(
+                f"> **⚠ Unrecovered table — {finding.represents_table_label}** (page {finding.page_no}). "
+                "Docling classified this table's body as a picture region rather than a table, so it "
+                "carries no table cells at all. The region is preserved below as an image asset. "
+                "**Its contents are not machine-readable and require human review or a targeted OCR pass.**"
+                f"\n\n![{caption}]({finding.asset_path})"
+            )
+        elif finding.asset_path:
             replacements.append(f"![{caption}]({finding.asset_path})")
         else:
             replacements.append(

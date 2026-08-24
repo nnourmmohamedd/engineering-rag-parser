@@ -153,6 +153,41 @@ and `timings_s` excluded. Those fields vary by definition. Model inference is
 deterministic on CPU for a fixed input; a GPU run may differ in low-order
 floating-point detail and has not been checked.
 
+## 13. Defects found by `PROJECT_COMPLETION_AUDIT.md` and their disposition
+
+The audit (2026-08-24) found six previously undocumented defects (D-1…D-6),
+none of which invalidated the parsing result. All six were fixed and are
+covered by regression tests; see `PARSER_STAGE_FINAL_REPORT.md` for the full
+evidence table.
+
+| ID | Defect | Fix |
+|---|---|---|
+| D-1 | `pip install -e ".[dev]"` was broken (`dev` only existed as a PEP 735 dependency group, not an extra) | `dev` is now also declared under `[project.optional-dependencies]`; both installation paths work |
+| D-2 | `run_manifest.json` recorded `table_structure_options: {}` even though the runtime object was fully configured | `describe_effective_options()` now re-serialises `table_structure_options`/`ocr_options`/`picture_description_options` from the live objects, by concrete class |
+| D-3 | `docling/document.json` image URIs used Windows backslash separators, unresolvable on POSIX | `save_document_json()` post-processes and re-validates the file; a `json_portable_paths` gate now checks it on every run |
+| D-4 | The final report named the older of two byte-identical final runs | Superseded: a new final run is produced and named unambiguously in `PARSER_STAGE_FINAL_REPORT.md` |
+| D-5 | Table 3 (detected as a picture, not a table region) was not covered by the no-silent-loss gate | `flag_table_only_pictures()` marks such pictures; `unrecovered_content_preserved` now covers both table-region and picture-region unrecovered tables |
+| D-6 | List-type inventory disagreed with the Markdown (41 "ordered" vs 31 rendered bullets) | `build_inventory()` now reads `ListItem.enumerated` — the same field the Markdown serializer consults — instead of guessing from the marker string |
+
+## 14. `scanned` profile remains experimental in this environment
+
+**Unchanged by this pass.** `easyocr` is a ~100 MB optional dependency
+(`pip install -e ".[ocr]"`) that was deliberately not installed, to avoid an
+unjustified heavy download for a milestone whose acceptance document does not
+need OCR (it has a clean, complete native text layer). Consequently:
+
+- OCR **option construction** is unit-tested (`test_scanned_enables_full_page_ocr`).
+- An actual OCR **conversion** — the thing that would prove the `scanned`
+  profile works, not just that it builds a valid options object — has never
+  been executed in this repository.
+- `choose_profile()`'s decision to route an image-only document to `scanned`
+  is exercised only against a synthetic image-only fixture, not a real scan.
+
+Treat `scanned`/OCR support as **implemented but unproven**, not as validated.
+The CLI does not claim otherwise: it warns clearly when `do_ocr` is requested
+but no OCR engine is importable in the environment, rather than silently
+falling back or claiming success.
+
 ---
 
 ## What is genuinely solid

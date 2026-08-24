@@ -38,9 +38,9 @@ acceptance run.
 | `docling.generate_table_images` | `PdfPipelineOptions.generate_table_images` | `False` | `False` |
 | `docling.images_scale` | `PdfPipelineOptions.images_scale` | `1.0` | `2.0` **←changed** |
 | `docling.layout_options` | `PdfPipelineOptions.layout_options` | `{"keep_empty_clusters":false,"skip_cell_assignment":false,"cre…` | `{"keep_empty_clusters":false,"skip_cell_assignment":false,"cre…` |
-| `docling.ocr_options` | `PdfPipelineOptions.ocr_options` | `{"mode":"default","lang":[],"scale":3.0,"force_full_page_ocr":…` | `{"mode":"default","lang":[],"scale":3.0,"force_full_page_ocr":…` |
+| `docling.ocr_options` | `PdfPipelineOptions.ocr_options` | `{"type":"OcrAutoOptions","mode":"default","lang":[],"scale":3.…` | `{"type":"OcrAutoOptions","mode":"default","lang":[],"scale":3.…` |
 | `docling.picture_description.enabled` | `PdfPipelineOptions.do_picture_description` | `False` | `False` |
-| `docling.table_mode` | `PdfPipelineOptions.table_structure_options` | `{}` | `{}` |
+| `docling.table_mode` | `PdfPipelineOptions.table_structure_options` | `{"type":"TableStructureOptions","do_cell_matching":true,"mode"…` | `{"type":"TableStructureOptions","do_cell_matching":true,"mode"…` |
 | `limits.document_timeout_s` | `PdfPipelineOptions.document_timeout` | `None` | `3600.0` **←changed** |
 
 ---
@@ -189,7 +189,8 @@ Dumped from the constructed object for the `high_fidelity` profile:
     "force_full_page_ocr": false,
     "lang": [],
     "mode": "default",
-    "scale": 3.0
+    "scale": 3.0,
+    "type": "OcrAutoOptions"
   },
   "picture_classification_options": {
     "engine_options": {
@@ -214,7 +215,11 @@ Dumped from the constructed object for the `high_fidelity` profile:
   "queue_max_size": 100,
   "stage_shutdown_timeout_seconds": 15.0,
   "table_batch_size": 4,
-  "table_structure_options": {}
+  "table_structure_options": {
+    "do_cell_matching": true,
+    "mode": "accurate",
+    "type": "TableStructureOptions"
+  }
 }
 ```
 

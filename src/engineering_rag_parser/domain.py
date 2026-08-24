@@ -304,6 +304,12 @@ class PictureFinding(_Model):
     asset_path: str | None = None
     asset_sha256: str | None = None
     classification: Literal["substantive", "decorative_repeated", "small", "unknown"] = "unknown"
+    represents_table_label: str | None = Field(
+        default=None,
+        description="e.g. 'Table 3' when this picture's caption identifies it as a labelled table whose "
+        "body Docling classified as a picture region rather than a table (zero cells, not just zero "
+        "recovered cells). Set so the no-silent-loss gate can cover this case too.",
+    )
     repeated_on_pages: list[int] = Field(default_factory=list)
     severity: Severity = Severity.INFO
     notes: list[str] = Field(default_factory=list)
