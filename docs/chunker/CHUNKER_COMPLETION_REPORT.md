@@ -37,10 +37,9 @@ future document; it claims the defined software scope is done and verified.
 
 ## 4. Commit hash
 
-See the final commit list pushed with this report (this document is updated
-with the exact hash once the final commit is made — the branch history is
-the authoritative record; run `git log feature/hierarchical-recursive-chunker`
-for the exact sequence).
+`262fe8e` — "Implement hierarchical-first, conditionally-recursive chunking
+service", on `feature/hierarchical-recursive-chunker`, branched from
+verified `master` at `9b1c072`.
 
 ## 5. PR URL
 
