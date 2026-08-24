@@ -38,25 +38,30 @@ future document; it claims the defined software scope is done and verified.
 ## 4. Commit hash
 
 `262fe8e` — "Implement hierarchical-first, conditionally-recursive chunking
-service", on `feature/hierarchical-recursive-chunker`, branched from
-verified `master` at `9b1c072`.
+service" (the core implementation) and `7151418` — "Fix CI: install the
+chunking extra so the chunker service imports" (the CI fix), both on
+`feature/hierarchical-recursive-chunker`, branched from verified `master` at
+`9b1c072`. Merged into `master` as merge commit `b9741a7`.
 
 ## 5. PR URL
 
-Opened after this report's commit is pushed — see the chat response for the
-exact link, or `gh pr list` once GitHub CLI is authenticated in this
-environment (it was not, per the master prompt's instruction not to request
-credentials — the same constraint recorded in
-`RESTRUCTURE_COMPLETION_REPORT.md`).
+**Merged.** https://github.com/nnourmmohamedd/engineering-rag-parser/pull/2
+— PR #2, "Feature/hierarchical recursive chunker", merged into `master` as
+merge commit `b9741a7` on 2026-08-24T18:11:08Z.
 
 ## 6. CI status for Python 3.11 and 3.13
 
-Not yet observed — GitHub Actions triggers only on push to `main`/`master`
-or on a `pull_request`; pushing a feature branch alone does not trigger it.
-Every check the workflow runs (ruff format/lint, mypy, fast tests with
-coverage, notebook validation, wheel build, wheel-content checks) was
-independently re-executed locally and passed — see §12–17. This is not
-claimed as equivalent to a green Actions run.
+**Both PASS.** The first CI run on the PR (`32756865637`) failed both
+`quality (3.11)` and `quality (3.13)` at the "Fast tests with coverage"
+step with `ModuleNotFoundError: No module named 'langchain_text_splitters'`
+— the workflow's install step ran `pip install -e ".[dev]"` only, never
+updated to include the `chunking` extra that the chunker service depends on.
+Fixed in commit `7151418` ("Fix CI: install the chunking extra so the
+chunker service imports") by changing the install line to
+`.[dev,chunking]"`. Reproduced locally (identical traceback in a
+dev-only-extras venv) and independently confirmed the fix resolves it before
+pushing. The rerun (`32760036454`) passed both
+`quality (3.11)` (3m4s) and `quality (3.13)` (3m13s) cleanly.
 
 ## 7. Final architecture
 
@@ -199,9 +204,13 @@ comparison).
 `engineering_rag_parser-1.0.0-py3-none-any.whl` contains the complete
 `engineering_rag/services/chunker/` tree (24 files) and
 `engineering_rag/api/chunker_cli.py`; `entry_points.txt` lists both
-`engrag-parse` and `engrag-chunk`. Clean-install verification: see §21 for
-the exact commands and result recorded once the temporary `.venv-clean` run
-completed (created outside, never overwriting, the permanent `.venv`).
+`engrag-parse` and `engrag-chunk`. Clean-install verification: **complete**
+— a fresh `.venv-clean` (created outside, never overwriting, the permanent
+`.venv`) had `pip install -e ".[dev,chunking]"` run from scratch, then
+`engrag-parse --version`, `engrag-chunk --version`/`--help`, the full fast
+test suite (361 passed), `ruff format --check`, `ruff check`, `mypy src`,
+and `python -m build --wheel` all passed inside it; `.venv-clean` was then
+removed.
 
 ## 18. Engineering-PDF chunk statistics
 
@@ -279,7 +288,7 @@ two runs).
 | Documentation complete | ✅ 7 docs + READMEs |
 | HybridChunker comparison exists | ✅ §20, reproducible script |
 | Limitations and human-review items honest | ✅ §22–23 |
-| CI passes on Python 3.11 and 3.13 | ⏳ not yet observed — see §6 |
+| CI passes on Python 3.11 and 3.13 | ✅ both jobs pass, run `32760036454` — see §6 |
 
 ## 22. Known limitations
 
@@ -340,13 +349,14 @@ chunker propagates every parser-flagged item forward
 python scripts\chunker\compare_hybrid_baseline.py --input "data\output\parser\Instrumentation-and-Control-Engineering\20260824T124235Z-01e4d6fa" --output docs\chunker\_generated\engineering_pdf_baseline_comparison.json
 ```
 
-## 25. Ready to merge?
+## 25. Merged
 
-**Ready pending a green GitHub Actions run** (§6) — every check that
-workflow runs was independently re-executed locally and passed, but this
-report does not claim CI passed without having observed it, consistent with
-the master prompt's instruction. Per instruction, this branch is **not**
-being merged automatically regardless of CI outcome.
+**Yes — PR #2 merged into `master` as `b9741a7` on 2026-08-24T18:11:08Z**,
+after both `quality (3.11)` and `quality (3.13)` CI jobs passed (§6). Local
+`master` is fast-forwarded to `b9741a7` and confirmed identical to
+`origin/master`. The feature branch
+`feature/hierarchical-recursive-chunker` has been deleted both locally and
+on the remote.
 
 ## 26. Ready for the embedding/vector-database milestone?
 
