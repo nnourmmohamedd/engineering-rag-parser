@@ -1,0 +1,52 @@
+{
+  "source": {
+    "filename": "scanned_docling_test_image_only.pdf",
+    "sha256": "57f84fd5b7d2e03db2fd6bbdb3877c7f3ed3201e28a1ef7b137e4445b733432a"
+  },
+  "tokenizer": "sentence-transformers/all-MiniLM-L6-v2",
+  "max_tokens": 256,
+  "production": {
+    "approach": "hierarchical_plus_conditional_recursive (production)",
+    "total_chunks": 9,
+    "content_type_distribution": {
+      "text": 7,
+      "table": 1,
+      "figure": 1
+    },
+    "token_stats": {
+      "min": 11,
+      "median": 33,
+      "mean": 57.0,
+      "p95": 184,
+      "max": 184
+    },
+    "empty_chunks": 0,
+    "oversized_chunks_unflagged": 0,
+    "source_elements_represented": 24,
+    "heading_path_preserved_fraction": 0.8889,
+    "duplicate_content_chunks": 0,
+    "processing_time_s": 1.1837,
+    "run_dir": "data\\output\\chunker\\scanned_docling_test_image_only\\20260824T155135Z-57f84fd5"
+  },
+  "hybrid_baseline": {
+    "approach": "docling_hybrid_chunker (baseline)",
+    "total_chunks": 8,
+    "content_type_distribution": {
+      "undifferentiated": 8
+    },
+    "token_stats": {
+      "min": 16,
+      "median": 66.0,
+      "mean": 81.75,
+      "p95": 263,
+      "max": 263
+    },
+    "empty_chunks": 0,
+    "oversized_chunks_unflagged": 1,
+    "source_elements_represented": 23,
+    "heading_path_preserved_fraction": 1.0,
+    "duplicate_content_chunks": 0,
+    "processing_time_s": 0.0341
+  },
+  "production_deterministic_repeat_run": true
+}

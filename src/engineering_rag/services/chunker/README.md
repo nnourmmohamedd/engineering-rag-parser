@@ -1,43 +1,34 @@
-# `services/chunker` — next milestone, not implemented
+# `services/chunker` — structure-aware chunking service
 
-This package is an intentionally empty scaffold. No chunking logic exists
-anywhere in this repository yet.
+**Implemented.** Hierarchical-first, tokenizer-aware, conditionally-recursive
+chunking of parser-produced `document.json` into retrieval-ready
+`chunks.jsonl`. Full documentation: [`docs/chunker/`](../../../../docs/chunker/).
 
-## Documented future contract
+## Quick start
 
-**Input:**
+```powershell
+.\.venv\Scripts\engrag-chunk.exe run `
+  --input "data\output\parser\<document>\<run-id>" `
+  --profile configs\chunker_production.yaml
+```
 
-- validated `DoclingDocument` JSON (`data/output/parser/<document>/<run-id>/docling/document.json`);
-- the source/run manifest (`run_manifest.json`);
-- the validation report (`validation/report.json`);
-- optional referenced visual assets (`assets/pictures/*.png`, `assets/pages/*.png`).
+## Public interface
 
-**Output** (`data/output/chunker/<document-name>/<run-id>/`):
+```python
+from engineering_rag.services.chunker import ChunkerConfig, ChunkerRequest, ChunkerResult, ChunkerService
 
-- structure-aware chunks;
-- chunk metadata;
-- parent/child relationships;
-- heading paths;
-- page provenance;
-- bounding-box provenance;
-- asset references;
-- validation severity carried over from the parser's findings;
-- a chunk manifest.
+result = ChunkerService().run(ChunkerRequest(input_path=..., config=ChunkerConfig()))
+```
 
-## Why the parser's JSON, not its Markdown
+See `docs/chunker/ARCHITECTURE.md` for the pipeline, `OUTPUT_SCHEMA.md` for
+the `chunks.jsonl` contract, `CONFIGURATION.md` for every parameter, and
+`MENTOR_EXPLANATION.md` for the design rationale.
 
-`docling/document.json` is the canonical input for this milestone, not
-`markdown/document.md`. The flattened Markdown drops per-item bounding boxes
-and cannot reliably distinguish an `asset_only` table from body text without
-regex-matching the warning blockquote the parser exporter injects. See
-`docs/productionization_options.md#future-ingestion-contract` for the full
-rationale, carried over unchanged from the parser milestone's own design
-decisions.
+## What this milestone does not do
 
-## Expected shape when this milestone starts
-
-Mirroring `services/parser/`: a `service.py` exposing `ChunkerService`,
-`ChunkerRequest`, `ChunkerResult`; a `models.py` for chunk-domain types; a
-`config.py` for chunking-specific configuration; and a
-`pipelines/chunking_pipeline.py` orchestrating it, the same way
-`pipelines/parsing_pipeline.py` orchestrates `services/parser`.
+No embedding generation, no vector database (ChromaDB or otherwise), no
+retrieval, no reranking, no chatbot — this milestone ends at validated,
+retrieval-ready chunk records. See
+`docs/chunker/MENTOR_EXPLANATION.md#how-this-prepares-chunks-for-embeddings-a-vector-database-and-reranking`
+for how `chunks.jsonl` is shaped to make that next milestone straightforward
+without re-deriving anything from the source PDF.

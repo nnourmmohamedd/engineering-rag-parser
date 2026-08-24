@@ -1,0 +1,53 @@
+{
+  "source": {
+    "filename": "Instrumentation-and-Control-Engineering.pdf",
+    "sha256": "01e4d6fa3a2e884f83fad507d08b228aa40f814dc0f3c44e6c9db315f73c3b1a"
+  },
+  "tokenizer": "sentence-transformers/all-MiniLM-L6-v2",
+  "max_tokens": 256,
+  "production": {
+    "approach": "hierarchical_plus_conditional_recursive (production)",
+    "total_chunks": 117,
+    "content_type_distribution": {
+      "text": 88,
+      "list": 14,
+      "figure": 13,
+      "table": 2
+    },
+    "token_stats": {
+      "min": 3,
+      "median": 34,
+      "mean": 50.09,
+      "p95": 113,
+      "max": 235
+    },
+    "empty_chunks": 0,
+    "oversized_chunks_unflagged": 0,
+    "source_elements_represented": 185,
+    "heading_path_preserved_fraction": 0.8632,
+    "duplicate_content_chunks": 0,
+    "processing_time_s": 1.2301,
+    "run_dir": "data\\output\\chunker\\Instrumentation-and-Control-Engineering\\20260824T155101Z-01e4d6fa"
+  },
+  "hybrid_baseline": {
+    "approach": "docling_hybrid_chunker (baseline)",
+    "total_chunks": 76,
+    "content_type_distribution": {
+      "undifferentiated": 76
+    },
+    "token_stats": {
+      "min": 19,
+      "median": 64.0,
+      "mean": 95.13,
+      "p95": 219,
+      "max": 240
+    },
+    "empty_chunks": 0,
+    "oversized_chunks_unflagged": 0,
+    "source_elements_represented": 170,
+    "heading_path_preserved_fraction": 0.9868,
+    "duplicate_content_chunks": 0,
+    "processing_time_s": 0.2221
+  },
+  "production_deterministic_repeat_run": true
+}
