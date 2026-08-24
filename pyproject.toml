@@ -41,7 +41,13 @@ dependencies = [
 [project.optional-dependencies]
 # OCR is opt-in: the default path must not pull heavyweight OCR wheels for a
 # digitally generated PDF that does not need them.
-ocr = ["easyocr>=1.7"]
+# rapidocr-onnxruntime ships its default detection/classification/recognition
+# ONNX models inside the wheel, so `scanned` profile runs work fully offline
+# after installation. easyocr is an optional alternative Docling also supports;
+# it downloads ~100 MB of weights from GitHub Releases on first use, which is
+# not guaranteed reachable in every deployment/CI network.
+ocr = ["rapidocr-onnxruntime>=1.2"]
+ocr-easyocr = ["easyocr>=1.7"]
 # Local VLM picture description (ADR-005). Off by default; see the parameter guide.
 vlm = ["transformers>=4.45", "accelerate>=1.0"]
 # Development tooling. Duplicated (deliberately) into [dependency-groups] below:
@@ -78,14 +84,14 @@ dev = [
 ]
 
 [project.scripts]
-engrag-parse = "engineering_rag_parser.cli:main"
+engrag-parse = "engineering_rag.api.cli:app"
 
 [project.urls]
 Documentation = "https://github.com/example/engineering-rag-parser#readme"
 Source = "https://github.com/example/engineering-rag-parser"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/engineering_rag_parser"]
+packages = ["src/engineering_rag"]
 
 # ---------------------------------------------------------------------------
 # Tooling
@@ -122,7 +128,7 @@ ignore = [
 "tests/**" = ["ARG", "BLE", "B011", "TID252"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["engineering_rag_parser"]
+known-first-party = ["engineering_rag"]
 
 [tool.mypy]
 # Deliberately NOT pinned to the minimum supported version: numpy's bundled
@@ -160,7 +166,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["src/engineering_rag_parser"]
+source = ["src/engineering_rag"]
 branch = true
 
 [tool.coverage.report]

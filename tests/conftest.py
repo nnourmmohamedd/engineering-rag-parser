@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from engineering_rag_parser.config import ParserConfig
+from engineering_rag.services.parser.config import ParserConfig
 
 ACCEPTANCE_PDF = Path("data/input/Instrumentation-and-Control-Engineering.pdf")
 
@@ -154,6 +154,57 @@ def image_only_pdf(fixtures_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
+def two_page_native_text_pdf(fixtures_dir: Path) -> Path:
+    """A two-page native-text A4 PDF whose second page is nearly blank.
+
+    Mirrors the shape of the real OCR benchmark source
+    (``data/input/ocr/scanned_docling_test_source.pdf``): a content-bearing
+    first page and a near-empty second page, so the image-only conversion
+    utility and blank-page handling can be regression-tested without the
+    confidential/user-supplied fixture.
+    """
+    pytest.importorskip("reportlab")
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas as pdfcanvas
+
+    path = fixtures_dir / "two_page_native_text.pdf"
+    if path.is_file():
+        return path
+    c = pdfcanvas.Canvas(str(path), pagesize=A4)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(20 * mm, 270 * mm, "SYNTHETIC OCR BENCHMARK")
+    c.setFont("Helvetica", 11)
+    c.drawString(20 * mm, 250 * mm, "DOC-REF: #TEST-0001")
+    c.drawString(20 * mm, 240 * mm, "Tag FT-101 reads 4-20 mA at 24 V DC.")
+    c.drawString(20 * mm, 230 * mm, "Status: Active")
+    c.drawString(20 * mm, 215 * mm, "Section 1: Overview")
+    c.drawString(20 * mm, 205 * mm, "This synthetic benchmark exercises the scanned/OCR conversion path")
+    c.drawString(20 * mm, 195 * mm, "end to end: preflight image-only detection, profile selection,")
+    c.drawString(20 * mm, 185 * mm, "OCR text recovery, JSON reload and Markdown export.")
+    c.drawString(20 * mm, 170 * mm, "Section 2: Instrumentation")
+    c.drawString(20 * mm, 160 * mm, "Transmitter PT-202 reads 0-16 bar. Accuracy is 0.5% of span.")
+    c.drawString(20 * mm, 150 * mm, "Transmitter TT-303 reads 0-250 degC per ISA-5.1 and the P&ID.")
+    c.drawString(20 * mm, 140 * mm, "Section 3: Review")
+    c.drawString(20 * mm, 130 * mm, "This page intentionally carries several short, independent lines")
+    c.drawString(20 * mm, 120 * mm, "so the rendered raster gives the OCR engine enough signal to")
+    c.drawString(20 * mm, 110 * mm, "recover distinct text blocks reliably at 300 DPI.")
+    c.showPage()
+    # Positioned as a footer (near the bottom, like the real OCR benchmark's
+    # near-blank page) rather than mid-page: Docling's OCR layout clustering
+    # merges very short, isolated mid-page text blocks with the previous
+    # page's content when there is too little else on the page to anchor a
+    # page break. A footer-positioned line does not trigger that merge.
+    c.setFont("Helvetica", 9)
+    c.drawString(
+        20 * mm, 12 * mm, "Page 2 of 2 -- intentionally near-blank, generated for OCR benchmark review."
+    )
+    c.showPage()
+    c.save()
+    return path
+
+
+@pytest.fixture(scope="session")
 def rotated_pdf(fixtures_dir: Path) -> Path:
     """A two-page PDF whose second page is rotated 90 degrees."""
     pytest.importorskip("reportlab")
@@ -227,3 +278,38 @@ requires_docling_models = pytest.mark.skipif(
     not docling_models_available(),
     reason="Docling model weights are not cached; set ENGRAG_SKIP_DOCLING=0 after a first online run.",
 )
+
+
+def _rapidocr_available() -> bool:
+    try:
+        import rapidocr_onnxruntime  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+requires_rapidocr = pytest.mark.skipif(
+    not _rapidocr_available(),
+    reason='rapidocr_onnxruntime is not installed; run `pip install -e ".[ocr]"` to exercise OCR tests.',
+)
+
+
+@pytest.fixture(scope="session")
+def synthetic_image_only_ocr_pdf(fixtures_dir: Path, two_page_native_text_pdf: Path) -> Path:
+    """A genuine image-only two-page PDF, rasterised from `two_page_native_text_pdf`.
+
+    Used for OCR integration tests that need a *real* image-only document (no
+    text layer at all) without depending on the user-supplied OCR benchmark
+    PDF, so these tests run in any clone/CI.
+    """
+    import sys
+
+    path = fixtures_dir / "synthetic_image_only_ocr.pdf"
+    if path.is_file():
+        return path
+    scripts_ocr = Path(__file__).resolve().parents[1] / "scripts" / "ocr"
+    sys.path.insert(0, str(scripts_ocr))
+    from make_image_only_pdf import build_image_only_pdf
+
+    build_image_only_pdf(two_page_native_text_pdf, path, dpi=300)
+    return path

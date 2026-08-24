@@ -5,14 +5,18 @@
 # `no_duplicated_spans` check is specifically built to catch.
 #
 # Requires the optional OCR extra:  pip install -e ".[ocr]"
-# EasyOCR downloads detection/recognition weights (~100 MB) on first use.
+# Default engine is RapidOCR (onnxruntime backend): its detection/classification/
+# recognition ONNX models ship inside the pip wheel, so a scanned run needs no
+# runtime network access. EasyOCR is also supported (set ocr_engine: easyocr,
+# install `pip install -e ".[ocr-easyocr]"`) but downloads ~100 MB of weights
+# from GitHub Releases on first use.
 
 profile: scanned
 
 docling:
   backend: docling_parse
   do_ocr: true
-  ocr_engine: easyocr
+  ocr_engine: rapidocr
   ocr_languages: ["en"]
   ocr_force_full_page: true
   ocr_mode: full_page

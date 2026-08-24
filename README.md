@@ -26,13 +26,35 @@ SHA-256 `01e4d6fa…3b1a`.
 | **Tables 1, 2, 3** | **Located on pages 16, 25→26 and 23. All three bodies are raster images with no text layer — Docling recovered 0 cells. Contents are NOT machine-readable and are flagged for human transcription.** |
 | Visual review | **17** side-by-side review cards under `validation/review/` |
 | Determinism | Re-runs are **byte-identical** for every deliverable (timestamps excluded) |
-| Tests | **201 passing** (168 fast + 33 full-document acceptance) |
+| Tests | **271 passing** (229 fast + 42 slow, including the OCR/scanned path) |
 
 Full measured results: [`docs/FINAL_IMPLEMENTATION_REPORT.md`](docs/FINAL_IMPLEMENTATION_REPORT.md).
+OCR verification evidence, thresholds and metrics: [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md).
 
 The single most important finding is the table one, and it is the reason this package exists in this
 shape: a parser that silently emitted the captions and dropped the table bodies would have looked
 perfect.
+
+---
+
+## Outcome on the controlled OCR/scanned benchmark
+
+The `scanned` profile has been run end to end against a genuine image-only PDF (proven independently:
+zero extractable text, one raster image per page), not just unit-tested for option construction.
+
+| Result | Detail |
+|---|---|
+| **Status** | `PASS` — both the explicit `scanned` profile and the `auto` profile (which correctly routes an image-only document to `scanned`) |
+| OCR engine | **RapidOCR** (`rapidocr-onnxruntime`, Apache-2.0) — ships its ONNX models inside the pip wheel, so a scanned run needs no runtime network access |
+| Critical-token recall | **100%** (31/31 hand-selected identity tokens: title, reference number, table values, status labels, form fields, code identifiers) |
+| Word-type recall | 96.9% (normalized against an independent pdfminer.six/pypdf ground truth) |
+| Page handling | Both pages represented in order; the nearly-blank second page preserved, not dropped |
+| JSON / Markdown | Reloads into `DoclingDocument`; Markdown non-empty and portable |
+
+Full methodology, ground-truth manifest, thresholds and the one disclosed OCR limitation (a glyph
+misread resolved by raising render DPI) are in [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md).
+This benchmark proves the *software path* works; it is not a claim about OCR accuracy on arbitrary
+real-world scans.
 
 ---
 
@@ -67,29 +89,37 @@ perfect.
 
 ## Architecture
 
+The package is organised as services (`engineering_rag.services.*`), each with an isolated,
+production-complete implementation, orchestrated by a thin pipeline layer and exposed through a
+CLI — see [`docs/architecture/service_architecture.md`](docs/architecture/service_architecture.md)
+for the full picture, including the future chunker/client/database/prompt boundaries.
+
 ```text
-inspect_source()        preflight.py       independent baseline (pypdf / pdfminer.six / pypdfium2)
+inspect_source()        services/parser/preflight.py    independent baseline (pypdf / pdfminer.six / pypdfium2)
         │
         ▼
-choose_profile()        pipeline_factory.py  evidence-based profile + audited reason
+choose_profile()        services/parser/profiles.py     evidence-based profile + audited reason
         │
         ▼
-convert_pdf()           parser.py          Docling conversion, status/partial handling
+convert_pdf()           services/parser/converter.py    Docling conversion, status/partial handling
         │
-        ├── save_document_json()           canonical JSON (Docling serializer, REFERENCED images)
+        ├── save_document_json()                        canonical JSON (Docling serializer, REFERENCED images)
         │
         ├── export_assets() ──────────────► assets/pictures/*.png, assets/pages/*.png
-        │   export_markdown()  exporters.py  markdown/document.md
+        │   export_markdown()  services/parser/exporters.py  markdown/document.md
         │
         ▼
-validation/             coverage · structure · markdown · visual · report
+services/parser/validation/   source · structure · markdown · visual · report
         │
         ▼
-RunDirectory            artifacts.py       immutable run dir + run_manifest.json
+RunDirectory            services/parser/artifacts.py    immutable run dir + run_manifest.json
 ```
 
-All Docling imports live in `pipeline_factory.py` and `parser.py`. `config.py` exposes a stable
-public key set so a Docling upgrade never invalidates a stored manifest or a user's YAML.
+`services/parser/service.py::ParserService` orders these steps; `pipelines/parsing_pipeline.py`
+is the thin entry point the CLI (`api/cli.py`) and any future adapter call. All Docling imports
+live in `services/parser/{converter,inventory,exporters}.py` and `services/parser/validation/
+{structure,visual}.py`. `services/parser/config.py` exposes a stable public key set so a Docling
+upgrade never invalidates a stored manifest or a user's YAML.
 
 ---
 
@@ -138,7 +168,8 @@ python -m pip install -e ".[dev]"
 ### Optional extras
 
 ```bash
-pip install -e ".[ocr]"   # EasyOCR — only for genuinely scanned documents
+pip install -e ".[ocr]"   # RapidOCR (default engine) — only for genuinely scanned documents
+pip install -e ".[ocr-easyocr]"  # EasyOCR alternative (set docling.ocr_engine: easyocr)
 pip install -e ".[vlm]"   # local VLM picture description (off by default, see ADR-005)
 ```
 
@@ -205,8 +236,8 @@ Other subcommands:
 ```bash
 engrag-parse inspect  --input data/input/Instrumentation-and-Control-Engineering.pdf   # preflight only
 engrag-parse run      --input ... --config configs/auto.yaml --json                    # machine-readable
-engrag-parse validate --run artifacts/<stem>/<run-id> --strict                         # re-gate in CI
-engrag-parse show     --run artifacts/<stem>/<run-id>                                  # summarise a run
+engrag-parse validate --run data/output/parser/<stem>/<run-id> --strict                # re-gate in CI
+engrag-parse show     --run data/output/parser/<stem>/<run-id>                         # summarise a run
 engrag-parse --help
 ```
 
@@ -217,7 +248,7 @@ Exit codes: `0` pass (or pass-with-warnings), `1` validation FAIL, `2` input rej
 
 ## Output tree
 
-Each run creates an immutable directory `artifacts/<source_stem>/<UTC-timestamp>-<sha8>/`:
+Each run creates an immutable directory `data/output/parser/<source_stem>/<UTC-timestamp>-<sha8>/`:
 
 | Path | Meaning |
 |---|---|
@@ -236,7 +267,9 @@ Each run creates an immutable directory `artifacts/<source_stem>/<UTC-timestamp>
 | `logs/run.jsonl` | Structured event log, one JSON object per line |
 
 Runs never overwrite each other (`mkdir(exist_ok=False)`), and every artifact write is path-checked
-against the run root.
+against the run root. `--artifacts` on `run` overrides the output root when needed (including writing
+into a pre-existing `artifacts/` directory from before the service-architecture restructure); `validate`
+and `show` accept any existing run directory via `--run`, wherever it lives.
 
 ---
 
@@ -278,7 +311,7 @@ with a flagged unrecovered table is a more honest and more useful result than a 
 ```bash
 pytest -m "not slow"                 # fast: unit + integration + hygiene + CLI (~30s-1min)
 pytest -m slow                       # full acceptance run on the real PDF (~1-5 min)
-pytest -m "not slow" --cov=engineering_rag_parser --cov-report=term-missing  # with coverage
+pytest -m "not slow" --cov=engineering_rag --cov-report=term-missing         # with coverage
 
 ruff check .                         # lint
 ruff format --check .                # formatting
@@ -313,7 +346,10 @@ That shim is removed upstream; use `backend: docling_parse`.
 `cuda` only with ≥ 6 GB VRAM; a CUDA OOM mid-conversion yields a *partial* document, which is the
 worst failure mode for an auditable parser.
 
-**OCR engine not found.** `pip install -e ".[ocr]"`. EasyOCR fetches ~100 MB of weights on first use.
+**OCR engine not found.** `pip install -e ".[ocr]"` installs RapidOCR (default `ocr_engine`), whose
+detection/classification/recognition ONNX models ship inside the wheel — no runtime download needed.
+The EasyOCR alternative (`pip install -e ".[ocr-easyocr]"`, `ocr_engine: easyocr`) fetches ~100 MB of
+weights from GitHub Releases on first use; verify that host is reachable before relying on it.
 
 **Windows long paths.** Artifact paths nest several levels. Enable long paths:
 `git config --system core.longpaths true` and set
@@ -347,10 +383,13 @@ UTF-8 with LF regardless.
 
 | Document | Contents |
 |---|---|
-| [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md) | Authoritative completion report for this hardening pass: defect fixes, quality-gate results, final run identity |
-| [`PROJECT_COMPLETION_AUDIT.md`](PROJECT_COMPLETION_AUDIT.md) | The evidence-based audit this pass was scoped against |
+| [`RESTRUCTURE_COMPLETION_REPORT.md`](RESTRUCTURE_COMPLETION_REPORT.md) | Evidence for the service-architecture restructure: mapping, tests, quality gates, acceptance runs |
+| [`docs/architecture/service_architecture.md`](docs/architecture/service_architecture.md) | The service-oriented architecture: every package, dependency direction, how to add a new service |
+| [`docs/architecture/service_restructure_plan.md`](docs/architecture/service_restructure_plan.md) | The migration plan the restructure followed, with the complete old→new module mapping |
+| [`PARSER_STAGE_FINAL_REPORT.md`](PARSER_STAGE_FINAL_REPORT.md) | Authoritative completion report for the parsing milestone: defect fixes, quality-gate results, OCR verification |
+| [`PROJECT_COMPLETION_AUDIT.md`](PROJECT_COMPLETION_AUDIT.md) | The evidence-based audit the parsing-milestone hardening pass was scoped against |
 | [`docs/FINAL_IMPLEMENTATION_REPORT.md`](docs/FINAL_IMPLEMENTATION_REPORT.md) | Measured results, all 27 pages, verified vs unresolved |
-| [`docs/architecture.md`](docs/architecture.md) | Module responsibilities and data flow |
+| [`docs/architecture.md`](docs/architecture.md) | Module responsibilities and data flow (parser service internals) |
 | [`docs/docling_parameter_guide.md`](docs/docling_parameter_guide.md) | Every option: Docling field, default, chosen value, trade-off |
 | [`docs/validation_methodology.md`](docs/validation_methodology.md) | What each check proves and, importantly, what it does not |
 | [`docs/productionization_options.md`](docs/productionization_options.md) | Four deployment options compared; choice justified; ingestion contract |
@@ -360,7 +399,7 @@ UTF-8 with LF regardless.
 Reproduce the determinism check between two runs:
 
 ```bash
-python docs/_generated/determinism_check.py artifacts/<stem>/<run-a> artifacts/<stem>/<run-b>
+python docs/_generated/determinism_check.py data/output/parser/<stem>/<run-a> data/output/parser/<stem>/<run-b>
 ```
 
 Regenerate the Docling parameter guide after an upgrade:

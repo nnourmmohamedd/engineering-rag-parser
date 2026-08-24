@@ -136,15 +136,13 @@ package is import-clean, but **3.10–3.12 have not been executed**. Behaviour o
 scanned documents, multi-column layouts, rotated pages at scale, CJK text or
 100+ page documents is untested beyond the synthetic fixtures.
 
-## 11. GPU and OCR paths are configured but unexercised
+## 11. GPU is configured but unexercised; OCR is now proven end to end
 
 - `accelerator_device: cuda` is implemented and never run: the local MX450 has
   2 GB VRAM and CPU-only torch is installed (`torch.cuda.is_available() == False`).
-- The `scanned` profile and EasyOCR integration are implemented, and OCR option
-  construction is unit-tested, but **no OCR conversion has been executed** —
-  `easyocr` is not installed in the verified environment.
-
-Both are documented as available, not as validated.
+- The `scanned` profile **has now been run end to end** against a genuine
+  image-only PDF (see §14) — this is no longer an unexercised path. GPU
+  remains the one configured-but-unproven path.
 
 ## 12. Determinism excludes timestamps by construction
 
@@ -168,25 +166,51 @@ evidence table.
 | D-4 | The final report named the older of two byte-identical final runs | Superseded: a new final run is produced and named unambiguously in `PARSER_STAGE_FINAL_REPORT.md` |
 | D-5 | Table 3 (detected as a picture, not a table region) was not covered by the no-silent-loss gate | `flag_table_only_pictures()` marks such pictures; `unrecovered_content_preserved` now covers both table-region and picture-region unrecovered tables |
 | D-6 | List-type inventory disagreed with the Markdown (41 "ordered" vs 31 rendered bullets) | `build_inventory()` now reads `ListItem.enumerated` — the same field the Markdown serializer consults — instead of guessing from the marker string |
+| D-7 | `labelled_tables_located` failed CRITICAL on any document with zero `Table N:` captions in its native text, even when nothing was actually lost | Gate now passes when there are no unaccounted labels, regardless of whether any labels exist; found while OCR-testing a document with a data table but no literal `Table N:` caption |
 
-## 14. `scanned` profile remains experimental in this environment
+## 14. `scanned`/OCR path — proven end to end on a controlled benchmark
 
-**Unchanged by this pass.** `easyocr` is a ~100 MB optional dependency
-(`pip install -e ".[ocr]"`) that was deliberately not installed, to avoid an
-unjustified heavy download for a milestone whose acceptance document does not
-need OCR (it has a clean, complete native text layer). Consequently:
+**Updated by the OCR verification pass (2026-08-24).** The `scanned` profile
+has now been run against a genuine image-only PDF, not just unit-tested for
+option construction:
 
-- OCR **option construction** is unit-tested (`test_scanned_enables_full_page_ocr`).
-- An actual OCR **conversion** — the thing that would prove the `scanned`
-  profile works, not just that it builds a valid options object — has never
-  been executed in this repository.
-- `choose_profile()`'s decision to route an image-only document to `scanned`
-  is exercised only against a synthetic image-only fixture, not a real scan.
+- **OCR engine: RapidOCR** (`rapidocr-onnxruntime`, Apache-2.0), selected over
+  EasyOCR because its detection/classification/recognition ONNX models ship
+  inside the pip wheel — a `scanned` run needs no runtime network access.
+  EasyOCR downloads ~100 MB of weights from GitHub Releases on first use; that
+  host was unreachable from the verification environment (TLS-level connection
+  resets on `github.com`, confirmed via `urllib`, `requests` and `curl`, while
+  `pypi.org`/`huggingface.co`/GitHub's own CDN subdomain all succeeded), so
+  EasyOCR could not be proven end to end here. It remains supported
+  (`ocr_engine: easyocr`, `pip install -e ".[ocr-easyocr]"`) for environments
+  where that host is reachable.
+- **Benchmark source:** a 2-page WeasyPrint-generated PDF with a deliberately
+  complex layout (multi-column text, a data table, checkboxes, math notation,
+  a code block, form fields, a nearly-blank second page). Rasterised to a
+  genuine image-only PDF at 400 DPI with no text layer (proven independently:
+  `pdfminer.six` extracts 0 characters; every page carries exactly one raster
+  image; page count, A4 dimensions and page order are preserved).
+- **Result:** both the explicit `scanned` profile and the `auto` profile
+  (which correctly routes an image-only document to `scanned`) produced
+  `PASS`, 0 failed gates, `ocr_score` 0.986 in the manifest, 100% of the
+  31 hand-selected critical identity tokens recovered (document title,
+  reference number, table values, status labels, form fields, code
+  identifiers), 96.9% normalized word-type recall, JSON reload success, and
+  non-empty portable Markdown (including a recovered data table, in both
+  Markdown-table and HTML form).
+- **Known OCR-specific limitation, disclosed not hidden:** at 300 DPI, RapidOCR
+  misread one proper name ("El-Sayed" → "E1-Sayed", an l/1 glyph confusion) —
+  a textbook OCR ambiguity, not a pipeline defect. Raising the render
+  resolution to 400 DPI resolved it; this is now the recommended minimum for
+  small text.
+- **Not covered by this benchmark:** multi-page documents where OCR text is
+  genuinely absent from a page (a truly blank scanned page) beyond the
+  2-page case tested; multi-lingual documents; handwriting; low-contrast or
+  degraded scans. The controlled benchmark proves the *software path* works;
+  it is not a claim about OCR accuracy on arbitrary real-world scans.
 
-Treat `scanned`/OCR support as **implemented but unproven**, not as validated.
-The CLI does not claim otherwise: it warns clearly when `do_ocr` is requested
-but no OCR engine is importable in the environment, rather than silently
-falling back or claiming success.
+Full methodology, ground-truth manifest and measured metrics are in
+`PARSER_STAGE_FINAL_REPORT.md` §OCR verification.
 
 ---
 
