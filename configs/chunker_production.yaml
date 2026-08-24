@@ -1,0 +1,36 @@
+# Production chunking profile — hierarchical-first, conditional recursive
+# splitting, tokenizer-aware sizing for a local English sentence-embedding
+# model. See docs/chunker/CONFIGURATION.md for the full explanation of every
+# parameter (purpose, unit, default, safe range, consequences).
+
+profile: production
+
+tokenizer:
+  name: sentence-transformers/all-MiniLM-L6-v2   # 22M params, Apache-2.0, English general-purpose
+  revision: null
+  trust_remote_code: false
+
+max_tokens: 256           # matches all-MiniLM-L6-v2's own trained max_seq_length
+target_tokens: 180        # leaves headroom below max_tokens for heading/caption context
+min_chunk_tokens: 40      # below this, a chunk is a merge candidate
+text_overlap_tokens: 32   # recursively-split TEXT siblings only
+
+recursive_separators:
+  - "\n\n"
+  - "\n"
+  - ". "
+  - "! "
+  - "? "
+  - "; "
+  - ", "
+  - " "
+  - ""
+
+merge_small_chunks: true
+repeat_table_headers: true
+include_heading_context: true
+allowed_atomic_overflow: true
+
+output_root: data/output/chunker
+
+log_level: INFO

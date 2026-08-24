@@ -87,15 +87,43 @@ class TestPackageIsSelfContained:
                     offenders.append(f"{path}:{node.lineno}")
         assert not offenders, f"print() in runtime code: {offenders}"
 
-    def test_docling_imports_are_confined(self) -> None:
-        """Docling API churn must touch only the modules designed to absorb it."""
+    def test_docling_conversion_imports_are_confined_to_the_parser_service(self) -> None:
+        """The heavy `docling` conversion package (models, backends, OCR) must touch
+        only the parser's own isolation layer — API churn there must not ripple
+        into the chunker, which only ever reads the already-converted document.
+        """
         allowed = {"converter.py", "inventory.py", "exporters.py", "structure.py", "visual.py"}
         offenders: list[str] = []
         for path in _module_paths():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if (
+                    stripped.startswith("import docling.")
+                    or stripped == "import docling"
+                    or stripped.startswith("from docling.")
+                    or stripped.startswith("from docling import")
+                ):
+                    if path.name not in allowed:
+                        offenders.append(str(path))
+                    break
+        assert not offenders, (
+            f"unexpected `docling` (conversion package) imports outside the parser isolation layer: {offenders}"
+        )
+
+    def test_docling_core_document_model_is_shared_but_never_the_conversion_package(self) -> None:
+        """`docling_core` (the DoclingDocument model) is legitimately shared by both
+        services/parser and services/chunker — only the *conversion* package
+        (`docling`) is isolation-confined (see the check above).
+        """
+        for path in _module_paths(SRC / "services" / "chunker"):
             text = path.read_text(encoding="utf-8")
-            if ("import docling" in text or "from docling" in text) and path.name not in allowed:
-                offenders.append(str(path))
-        assert not offenders, f"unexpected Docling imports outside the isolation layer: {offenders}"
+            assert "import docling.\n" not in text
+            for line in text.splitlines():
+                stripped = line.strip()
+                assert not (stripped == "import docling" or stripped.startswith("from docling import")), (
+                    f"{path} imports the heavy `docling` conversion package; the chunker must only ever "
+                    "consume the already-converted DoclingDocument (docling_core), never convert a PDF itself"
+                )
 
     def test_old_package_does_not_exist(self) -> None:
         """No duplicated parser implementation may remain under the pre-migration name."""
@@ -178,14 +206,19 @@ class TestServiceArchitectureBoundaries:
         ]
         assert not offenders, f"logging.basicConfig() called outside the application boundary: {offenders}"
 
-    def test_chunker_service_is_an_empty_scaffold(self) -> None:
-        chunker_init = SRC / "services" / "chunker" / "__init__.py"
-        assert chunker_init.is_file()
-        assert ast.parse(chunker_init.read_text(encoding="utf-8"))  # parses
-        # No chunking logic: the module should define nothing beyond __all__.
-        tree = ast.parse(chunker_init.read_text(encoding="utf-8"))
-        defs = [n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.ClassDef))]
-        assert not defs, f"services/chunker must remain an empty scaffold, found: {defs}"
+    def test_chunker_service_public_interface_imports(self) -> None:
+        """The chunker milestone is implemented; its public interface must import cleanly."""
+        from engineering_rag.services.chunker import (
+            ChunkerConfig,
+            ChunkerRequest,
+            ChunkerResult,
+            ChunkerService,
+        )
+
+        assert callable(ChunkerService)
+        assert ChunkerConfig is not None
+        assert ChunkerRequest is not None
+        assert ChunkerResult is not None
 
 
 @pytest.mark.skipif(not NOTEBOOK.is_file(), reason="notebook not present")

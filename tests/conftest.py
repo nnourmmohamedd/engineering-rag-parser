@@ -294,6 +294,24 @@ requires_rapidocr = pytest.mark.skipif(
 )
 
 
+def _chunker_tokenizer_available() -> bool:
+    try:
+        from engineering_rag.services.chunker.config import TokenizerOptions
+        from engineering_rag.services.chunker.tokenizer import get_tokenizer
+
+        get_tokenizer(TokenizerOptions())
+    except Exception:  # noqa: BLE001
+        return False
+    return True
+
+
+requires_chunker_tokenizer = pytest.mark.skipif(
+    not _chunker_tokenizer_available(),
+    reason="The chunker's default tokenizer is not installed/cached/reachable; run "
+    '`pip install -e ".[chunking]"` and ensure network access (or a pre-populated HF cache) once.',
+)
+
+
 @pytest.fixture(scope="session")
 def synthetic_image_only_ocr_pdf(fixtures_dir: Path, two_page_native_text_pdf: Path) -> Path:
     """A genuine image-only two-page PDF, rasterised from `two_page_native_text_pdf`.

@@ -244,6 +244,26 @@ engrag-parse --help
 Exit codes: `0` pass (or pass-with-warnings), `1` validation FAIL, `2` input rejected by preflight,
 `3` unexpected runtime failure.
 
+### Chunking (structure-aware, hierarchical-first)
+
+Chunk a completed parser run into retrieval-ready `chunks.jsonl`:
+
+```bash
+engrag-chunk run --input data/output/parser/<document>/<run-id> --profile configs/chunker_production.yaml
+```
+
+```bash
+engrag-chunk inspect  --input data/output/chunker/<document>/<run-id>/chunks.jsonl   # counts, token stats
+engrag-chunk validate --input data/output/chunker/<document>/<run-id> --strict       # re-gate in CI
+engrag-chunk --help
+```
+
+No embeddings, vector database, retrieval or reranking is implemented by this
+milestone — see [`docs/chunker/`](docs/chunker/) for the full architecture,
+output schema, configuration reference, validation gates, the HybridChunker
+baseline comparison, and the design rationale
+(`docs/chunker/MENTOR_EXPLANATION.md`).
+
 ---
 
 ## Output tree
@@ -383,6 +403,8 @@ UTF-8 with LF regardless.
 
 | Document | Contents |
 |---|---|
+| [`docs/chunker/CHUNKER_COMPLETION_REPORT.md`](docs/chunker/CHUNKER_COMPLETION_REPORT.md) | Evidence for the chunking milestone: tests, quality gates, real-document acceptance runs, HybridChunker comparison |
+| [`docs/chunker/ARCHITECTURE.md`](docs/chunker/ARCHITECTURE.md) · [`OUTPUT_SCHEMA.md`](docs/chunker/OUTPUT_SCHEMA.md) · [`CONFIGURATION.md`](docs/chunker/CONFIGURATION.md) · [`VALIDATION.md`](docs/chunker/VALIDATION.md) · [`MENTOR_EXPLANATION.md`](docs/chunker/MENTOR_EXPLANATION.md) | Chunker pipeline, output contract, config reference, validation gates, design rationale |
 | [`RESTRUCTURE_COMPLETION_REPORT.md`](RESTRUCTURE_COMPLETION_REPORT.md) | Evidence for the service-architecture restructure: mapping, tests, quality gates, acceptance runs |
 | [`docs/architecture/service_architecture.md`](docs/architecture/service_architecture.md) | The service-oriented architecture: every package, dependency direction, how to add a new service |
 | [`docs/architecture/service_restructure_plan.md`](docs/architecture/service_restructure_plan.md) | The migration plan the restructure followed, with the complete old→new module mapping |

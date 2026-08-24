@@ -18,31 +18,31 @@ touching code that has nothing to do with either.
 
 So every major capability is an **isolated service** under `services/`, with
 its own public interface, its own tests, and its own internal module
-structure. Today only `services/parser/` is implemented. The others are
-scaffolded (`services/chunker/`) or are empty boundaries reserved for a
-milestone that has not started (`clients/`, `databases/`, `prompts/`).
+structure. `services/parser/` and `services/chunker/` are both implemented.
+`clients/`, `databases/`, `prompts/` are empty boundaries reserved for
+milestones that have not started.
 
 ## Every top-level package
 
 ```text
 src/engineering_rag/
-├── api/           user/system entry points — today, the engrag-parse CLI
+├── api/           user/system entry points — the engrag-parse and engrag-chunk CLIs
 ├── clients/       future boundary: embedding/reranker/LLM/remote-model clients (empty)
 ├── databases/     future boundary: ChromaDB, metadata store, repositories (empty)
 ├── pipelines/     orchestration only — coordinates one or more services
 ├── prompts/       future boundary: retrieval/generation prompt templates (empty)
 ├── services/
 │   ├── parser/    COMPLETE — PDF parsing, validation, artifact generation
-│   └── chunker/   scaffold only — documented future contract, no implementation
+│   └── chunker/   COMPLETE — hierarchical + conditional-recursive chunking, validation
 └── utils/         generic, service-agnostic helpers (paths, hashing, logging)
 ```
 
 | Package | Owns | Status |
 |---|---|---|
-| `api` | CLI (`cli.py`); a future HTTP interface would live here too | Implemented (CLI) |
-| `pipelines` | Orchestration functions that call one or more services in sequence | Implemented (`parsing_pipeline.py`) |
+| `api` | CLIs (`cli.py` for `engrag-parse`, `chunker_cli.py` for `engrag-chunk`); a future HTTP interface would live here too | Implemented |
+| `pipelines` | Orchestration functions that call one or more services in sequence | Implemented (`parsing_pipeline.py`, `chunking_pipeline.py`) |
 | `services/parser` | Everything PDF-parsing-domain: config, preflight, Docling conversion, export, validation, artifacts | Implemented, complete |
-| `services/chunker` | Structure-aware chunking of a parsed `DoclingDocument` | Scaffold only |
+| `services/chunker` | Hierarchical-first, tokenizer-aware, conditionally-recursive chunking of `document.json`; see `docs/chunker/` | Implemented, complete |
 | `clients` | Adapters to external model/service endpoints | Empty boundary |
 | `databases` | Adapters to vector stores / metadata stores | Empty boundary |
 | `prompts` | LLM prompt templates for retrieval/generation | Empty boundary |
@@ -52,25 +52,27 @@ src/engineering_rag/
 
 ```mermaid
 flowchart TD
-    api["api\n(engrag-parse CLI)"] --> pipelines["pipelines\n(parsing_pipeline)"]
-    pipelines --> services["services/parser\n(ParserService)"]
-    services --> utils["utils\n(paths, hashing, logging)"]
-    services -.future.-> clients["clients\n(empty)"]
-    services -.future.-> databases["databases\n(empty)"]
-    pipelines -.future.-> chunker["services/chunker\n(scaffold)"]
+    api["api\n(engrag-parse, engrag-chunk)"] --> pipelines["pipelines\n(parsing_pipeline, chunking_pipeline)"]
+    pipelines --> parser["services/parser\n(ParserService)"]
+    pipelines --> chunker["services/chunker\n(ChunkerService)"]
+    parser --> utils["utils\n(paths, hashing, logging)"]
+    chunker --> utils
+    parser -.future.-> clients["clients\n(empty)"]
+    parser -.future.-> databases["databases\n(empty)"]
 
     classDef impl fill:#2b8a3e,stroke:#1b5e24,color:#fff
     classDef scaffold fill:#495057,stroke:#343a40,color:#fff,stroke-dasharray: 4 3
-    class api,pipelines,services,utils impl
-    class clients,databases,chunker scaffold
+    class api,pipelines,parser,chunker,utils impl
+    class clients,databases scaffold
 ```
 
 Rule: **`api -> pipelines -> services -> utils`**, plus `services -> clients`
 and `services -> databases` once those are implemented. Never the reverse of
-any arrow, and never `services/parser -> services/chunker` or vice versa —
-sibling services do not import each other; they communicate only through
-files on disk (`data/output/parser/.../docling/document.json` is the
-chunker's documented future input).
+any arrow, and never `services/parser <-> services/chunker` — sibling
+services do not import each other; they communicate only through files on
+disk (`data/output/parser/.../docling/document.json` is the chunker's actual
+input, read via `services/chunker/loader.py`, never a direct Python import
+of `services.parser`).
 
 This is enforced by
 `tests/unit/test_architecture.py::TestServiceArchitectureBoundaries`, which
@@ -129,7 +131,12 @@ data/
     │   ├── validation/
     │   ├── logs/                       run.jsonl (domain events) + engrag.log (operational log)
     │   └── run_manifest.json
-    └── chunker/<document>/<run-id>/    future — not implemented
+    └── chunker/<document>/<run-id>/    chunker service runs (git-ignored)
+        ├── chunks.jsonl
+        ├── manifest.json
+        ├── validation_report.json
+        ├── chunking_summary.md
+        └── logs/chunker.log
 ```
 
 Defaults are resolved lazily via `engineering_rag.utils.paths` (never a
@@ -186,14 +193,17 @@ operational/diagnostic logging of what the code is doing; `JsonlLogger` is a
 structured record of what the *pipeline* decided. Neither was removed or
 silently duplicated by the other.
 
-## Future chunker boundary
+## Chunker boundary
 
-`services/chunker/` is an intentionally empty scaffold — see its own
-`README.md` for the documented future contract (input: the parser's
-`docling/document.json` + manifests; output: chunks with parent/child
-relationships, heading paths, page/bbox provenance, under
-`data/output/chunker/<document>/<run-id>/`). No chunking logic exists
-anywhere in this repository.
+`services/chunker/` is implemented — hierarchical-first, tokenizer-aware,
+conditionally-recursive chunking of the parser's `docling/document.json`
+into retrieval-ready `chunks.jsonl` with parent/child and merge lineage,
+heading paths, and page/bbox provenance, under
+`data/output/chunker/<document>/<run-id>/`. Full documentation:
+[`docs/chunker/`](../chunker/) (`ARCHITECTURE.md`, `OUTPUT_SCHEMA.md`,
+`CONFIGURATION.md`, `VALIDATION.md`, `MENTOR_EXPLANATION.md`,
+`HYBRID_BASELINE_COMPARISON.md`). Per this milestone's explicit scope: no
+embeddings, no vector database, no retrieval, no reranking, no chatbot.
 
 ## Future client/database/prompt boundaries
 

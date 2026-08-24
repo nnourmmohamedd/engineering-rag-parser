@@ -50,6 +50,10 @@ ocr = ["rapidocr-onnxruntime>=1.2"]
 ocr-easyocr = ["easyocr>=1.7"]
 # Local VLM picture description (ADR-005). Off by default; see the parameter guide.
 vlm = ["transformers>=4.45", "accelerate>=1.0"]
+# Chunker service: tokenizer-aware sizing (transformers, tokenizer files only
+# -- see docs/chunker/CONFIGURATION.md) and the standalone recursive text
+# splitter (langchain-text-splitters, not the full langchain framework).
+chunking = ["transformers>=4.45", "langchain-text-splitters>=0.3"]
 # Development tooling. Duplicated (deliberately) into [dependency-groups] below:
 # `pip install -e ".[dev]"` works on every supported pip version, while
 # `pip install -e . --group dev` (PEP 735, pip >= 25.1) is the modern equivalent.
@@ -85,6 +89,7 @@ dev = [
 
 [project.scripts]
 engrag-parse = "engineering_rag.api.cli:app"
+engrag-chunk = "engineering_rag.api.chunker_cli:app"
 
 [project.urls]
 Documentation = "https://github.com/example/engineering-rag-parser#readme"
