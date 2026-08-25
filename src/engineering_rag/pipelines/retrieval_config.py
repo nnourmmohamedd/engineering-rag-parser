@@ -17,9 +17,16 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict
 
+from engineering_rag.databases.bm25.config import BM25Config
 from engineering_rag.databases.chroma.config import ChromaConfig
 from engineering_rag.services.embedder.config import EmbedderConfig
-from engineering_rag.services.retriever.config import RetrievalEvaluationConfig, RetrievalSearchConfig
+from engineering_rag.services.reranker.config import RerankerConfig
+from engineering_rag.services.retriever.config import (
+    FusionConfig,
+    RetrievalEvaluationConfig,
+    RetrievalModeConfig,
+    RetrievalSearchConfig,
+)
 
 __all__ = ["RetrievalConfig", "load_retrieval_config"]
 
@@ -42,6 +49,14 @@ class RetrievalConfig(_Frozen):
     search: RetrievalSearchConfig = RetrievalSearchConfig()
     evaluation: RetrievalEvaluationConfig = RetrievalEvaluationConfig()
     logging: RetrievalLoggingConfig = RetrievalLoggingConfig()
+
+    # Hybrid retrieval + reranking (this milestone). Every field defaults to
+    # the vector-only production behavior, so an existing profile that omits
+    # these sections entirely still validates and still runs vector-only.
+    retrieval: RetrievalModeConfig = RetrievalModeConfig()
+    bm25: BM25Config = BM25Config()
+    fusion: FusionConfig = FusionConfig()
+    reranker: RerankerConfig = RerankerConfig()
 
     def effective_dict(self) -> dict[str, Any]:
         return json.loads(self.model_dump_json())
