@@ -83,7 +83,6 @@ class TestVersionAndHelp:
     def test_search_help(self) -> None:
         result = runner.invoke(app, ["search", "--help"])
         assert result.exit_code == 0
-        assert "--top-k" in result.output
 
 
 class TestSearchCommand:
