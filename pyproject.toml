@@ -98,6 +98,7 @@ dev = [
 engrag-parse = "engineering_rag.api.cli:app"
 engrag-chunk = "engineering_rag.api.chunker_cli:app"
 engrag-index = "engineering_rag.api.index_cli:app"
+engrag-retrieve = "engineering_rag.api.retrieve_cli:app"
 
 [project.urls]
 Documentation = "https://github.com/example/engineering-rag-parser#readme"
