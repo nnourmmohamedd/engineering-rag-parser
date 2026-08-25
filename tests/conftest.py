@@ -312,6 +312,48 @@ requires_chunker_tokenizer = pytest.mark.skipif(
 )
 
 
+def _qwen3_tokenizer_available() -> bool:
+    try:
+        from engineering_rag.services.context_builder.config import TokenizerConfig
+        from engineering_rag.services.context_builder.token_counter import get_token_counter
+
+        get_token_counter(TokenizerConfig(backend="qwen3"))
+    except Exception:  # noqa: BLE001
+        return False
+    return True
+
+
+requires_qwen3_tokenizer = pytest.mark.skipif(
+    not _qwen3_tokenizer_available(),
+    reason="The Qwen/Qwen3-8B tokenizer is not installed/cached/reachable; run "
+    '`pip install -e ".[answering]"` and ensure network access (or a pre-populated HF cache) once.',
+)
+
+
+def _ollama_available(model: str = "qwen3:8b") -> bool:
+    """Whether a local Ollama server is reachable and has `model` installed, for real answering tests."""
+    if os.environ.get("ENGRAG_SKIP_OLLAMA") == "1":
+        return False
+    try:
+        from engineering_rag.clients.ollama import OllamaConfig, OllamaHTTPClient
+
+        client = OllamaHTTPClient(
+            OllamaConfig(model=model, connect_timeout_seconds=2, read_timeout_seconds=5)
+        )
+        if not client.health_check():
+            return False
+        return any(m.name == model for m in client.list_models())
+    except Exception:  # noqa: BLE001
+        return False
+
+
+requires_ollama = pytest.mark.skipif(
+    not _ollama_available(),
+    reason="A local Ollama server with qwen3:8b installed is not reachable at http://127.0.0.1:11434; "
+    "install Ollama, run `ollama pull qwen3:8b`, and ensure the server is running to exercise these tests.",
+)
+
+
 @pytest.fixture(scope="session")
 def synthetic_image_only_ocr_pdf(fixtures_dir: Path, two_page_native_text_pdf: Path) -> Path:
     """A genuine image-only two-page PDF, rasterised from `two_page_native_text_pdf`.
