@@ -1,0 +1,75 @@
+# Production answering profile — grounded LLM answer generation on top of the
+# existing retrieval system. Retrieval itself is configured separately via
+# configs/retrieval_production.yaml (engrag-ask defaults to that path; pass
+# --retrieval-profile to use another). See docs/answering/ for the full
+# contract and gate list.
+
+profile: production
+
+answering:
+  default_retrieval_mode: vector
+  prompt_version: "1.0.0"
+  allow_single_repair: true
+
+# `expected_digest` is intentionally null until Ollama is installed on this
+# machine and `engrag-ask validate` records the real, observed digest of the
+# locally-pulled `qwen3:8b` (see docs/answering/OLLAMA_SETUP.md). Until then,
+# strict_digest has no digest to compare against and the check reports
+# "skipped" rather than failing. Once the real digest is recorded here,
+# strict_digest: true means `engrag-ask validate`/`ask` refuses to run
+# against a model whose installed digest does not match.
+ollama:
+  base_url: http://127.0.0.1:11434
+  model: qwen3:8b
+  expected_digest: null
+  strict_digest: true
+  think: false
+  temperature: 0.0
+  seed: 42
+  context_window_tokens: 8192
+  max_output_tokens: 1024
+  keep_alive: 10m
+  connect_timeout_seconds: 5
+  read_timeout_seconds: 180
+  max_retries: 1
+
+# Token budget (measured evidence, see docs/answering/GROUNDED_ANSWERING_ARCHITECTURE.md
+# and services/context_builder/config.py): the v1.0.0 system prompt is 672
+# tokens under the Qwen3 tokenizer; the question/citation-id wrapper plus
+# chat-template role markers add roughly another 50. reserved_system_tokens
+# (900) leaves real headroom over that measured ~720-750 total.
+#
+#   max_context_tokens (5000) + reserved_system_tokens (900)
+#     + safety_margin_tokens (400) + ollama.max_output_tokens (1024)
+#     = 7324 <= ollama.context_window_tokens (8192)   [868 tokens headroom]
+context_builder:
+  tokenizer:
+    backend: qwen3
+    model_name: Qwen/Qwen3-8B
+    revision: b968826d9c46dd6066d109eabc6255188de91218
+  max_context_tokens: 5000
+  reserved_system_tokens: 900
+  safety_margin_tokens: 400
+  max_sources: 10
+  max_sources_per_document: 8
+  max_sources_per_section: 3
+  deduplicate_content: true
+  neighbor_expansion_enabled: true
+  neighbor_window: 1
+
+grounding:
+  require_inline_citations: true
+  require_supporting_quotes: true
+  minimum_citations_for_answer: 1
+  fail_on_unknown_citation: true
+  fail_on_quote_mismatch: true
+  citation_coverage_warn_below: 0.6
+
+evaluation:
+  dataset_path: data/eval/answering_ground_truth.jsonl
+  output_root: data/output/answering_evaluation
+
+logging:
+  log_level: INFO
+
+output_root: data/output/answering
