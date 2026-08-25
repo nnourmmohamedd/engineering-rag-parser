@@ -1,0 +1,1802 @@
+[
+  {
+    "query": "What activities are performed during the FEED phase?",
+    "modes": {
+      "vector": {
+        "total_duration_s": 14.2935,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_43856312430296c3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_359f3f41bfa09184",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Phase 2: Front-End Engineering Design (FEED) and Feasibility",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_caa8f92d1e40f22f",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "2.2 Phase 2: Front-End Engineering Design (FEED) and Feasibility",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_ab16bedfbf6f078b",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Phase 3: Detailed Engineering Design (Execution Core)",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_df5ca6e2fa22b880",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Defining Operational Needs and User Functional Requirements (UFR)",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "hybrid": {
+        "total_duration_s": 4.0854,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_caa8f92d1e40f22f",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "2.2 Phase 2: Front-End Engineering Design (FEED) and Feasibility",
+            "vector_rank": 3,
+            "bm25_rank": 4,
+            "rrf_rank": 1,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_359f3f41bfa09184",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Phase 2: Front-End Engineering Design (FEED) and Feasibility",
+            "vector_rank": 2,
+            "bm25_rank": 10,
+            "rrf_rank": 2,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_43856312430296c3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 1,
+            "bm25_rank": 13,
+            "rrf_rank": 3,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_fdaffc9587b0091b",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section 2: The Instrumentation Design Engineering Process Flow",
+            "vector_rank": 15,
+            "bm25_rank": 6,
+            "rrf_rank": 4,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_058e60ae79eb7ffe",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Process Blueprints and Control Philosophy",
+            "vector_rank": 13,
+            "bm25_rank": 12,
+            "rrf_rank": 5,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "vector-rerank": {
+        "total_duration_s": 10.4706,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_8b37126afe96d3a0",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Phase 4: Procurement, Installation, and Integration",
+            "vector_rank": 7,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_359f3f41bfa09184",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Phase 2: Front-End Engineering Design (FEED) and Feasibility",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_532e4ac3c3bc38f4",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.3 Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 16,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_43856312430296c3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_ab16bedfbf6f078b",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Phase 3: Detailed Engineering Design (Execution Core)",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 5
+          }
+        ]
+      },
+      "hybrid-rerank": {
+        "total_duration_s": 11.0843,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_359f3f41bfa09184",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Phase 2: Front-End Engineering Design (FEED) and Feasibility",
+            "vector_rank": 2,
+            "bm25_rank": 10,
+            "rrf_rank": 2,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_532e4ac3c3bc38f4",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.3 Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 16,
+            "bm25_rank": 11,
+            "rrf_rank": 7,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_43856312430296c3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 1,
+            "bm25_rank": 13,
+            "rrf_rank": 3,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_7e017bc6b3c53740",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Issuance Status Significance",
+            "vector_rank": null,
+            "bm25_rank": 2,
+            "rrf_rank": 17,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_ab16bedfbf6f078b",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Phase 3: Detailed Engineering Design (Execution Core)",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": 19,
+            "reranker_rank": 5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "Why is instrumentation and control engineering important?",
+    "modes": {
+      "vector": {
+        "total_duration_s": 3.9741,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_ce7f44da13813912",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Conclusions and Synthesis",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_12c5e3215ad8cfff",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_94ec3f7b52e29ed2",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_82df6aec1308dcfe",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section 1: Foundational Framework of Instrumentation Design Engineering (IDE)",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_fdaffc9587b0091b",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section 2: The Instrumentation Design Engineering Process Flow",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "hybrid": {
+        "total_duration_s": 4.206,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_94ec3f7b52e29ed2",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": 3,
+            "bm25_rank": 5,
+            "rrf_rank": 1,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_fdaffc9587b0091b",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section 2: The Instrumentation Design Engineering Process Flow",
+            "vector_rank": 5,
+            "bm25_rank": 3,
+            "rrf_rank": 2,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_ce7f44da13813912",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Conclusions and Synthesis",
+            "vector_rank": 1,
+            "bm25_rank": 8,
+            "rrf_rank": 3,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_0a49b87c6c142e40",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "2.4 Phase 4: Procurement, Installation, and Integration",
+            "vector_rank": 10,
+            "bm25_rank": 1,
+            "rrf_rank": 4,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_82df6aec1308dcfe",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section 1: Foundational Framework of Instrumentation Design Engineering (IDE)",
+            "vector_rank": 4,
+            "bm25_rank": 14,
+            "rrf_rank": 5,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "vector-rerank": {
+        "total_duration_s": 11.7393,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_82df6aec1308dcfe",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section 1: Foundational Framework of Instrumentation Design Engineering (IDE)",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_2d36f20344ee1bd8",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.2 Governing Standards and Compliance Frameworks",
+            "vector_rank": 7,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_94ec3f7b52e29ed2",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_0a49b87c6c142e40",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "2.4 Phase 4: Procurement, Installation, and Integration",
+            "vector_rank": 10,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_743052eaa35412db",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Purpose and Content",
+            "vector_rank": 8,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 5
+          }
+        ]
+      },
+      "hybrid-rerank": {
+        "total_duration_s": 11.5548,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_82df6aec1308dcfe",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section 1: Foundational Framework of Instrumentation Design Engineering (IDE)",
+            "vector_rank": 4,
+            "bm25_rank": 14,
+            "rrf_rank": 5,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_2d36f20344ee1bd8",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.2 Governing Standards and Compliance Frameworks",
+            "vector_rank": 7,
+            "bm25_rank": 15,
+            "rrf_rank": 7,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_94ec3f7b52e29ed2",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": 3,
+            "bm25_rank": 5,
+            "rrf_rank": 1,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_0a49b87c6c142e40",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "2.4 Phase 4: Procurement, Installation, and Integration",
+            "vector_rank": 10,
+            "bm25_rank": 1,
+            "rrf_rank": 4,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_12c5e3215ad8cfff",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": 2,
+            "bm25_rank": 25,
+            "rrf_rank": 9,
+            "reranker_rank": 5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "What is an instrument index?",
+    "modes": {
+      "vector": {
+        "total_duration_s": 4.041,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_95b81ee200d7e603",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "3.2 Instrument Index (The Master Database)",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_3b7ae6d712325002",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_67703f828dce6e88",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Instrument Index (The Master Database)",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_1a193701afdcdb30",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "hybrid": {
+        "total_duration_s": 4.0343,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_3b7ae6d712325002",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 2,
+            "bm25_rank": 1,
+            "rrf_rank": 1,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_95b81ee200d7e603",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "3.2 Instrument Index (The Master Database)",
+            "vector_rank": 1,
+            "bm25_rank": 3,
+            "rrf_rank": 2,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_1a193701afdcdb30",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 4,
+            "bm25_rank": 2,
+            "rrf_rank": 3,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_67703f828dce6e88",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Instrument Index (The Master Database)",
+            "vector_rank": 3,
+            "bm25_rank": 4,
+            "rrf_rank": 4,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 5,
+            "bm25_rank": 7,
+            "rrf_rank": 5,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "vector-rerank": {
+        "total_duration_s": 11.5546,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_95b81ee200d7e603",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "3.2 Instrument Index (The Master Database)",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_3b7ae6d712325002",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_1a193701afdcdb30",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_f7a73a43ccb42135",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Piping and Instrumentation Diagrams (P&IDs)",
+            "vector_rank": 7,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 5
+          }
+        ]
+      },
+      "hybrid-rerank": {
+        "total_duration_s": 11.1498,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_95b81ee200d7e603",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "3.2 Instrument Index (The Master Database)",
+            "vector_rank": 1,
+            "bm25_rank": 3,
+            "rrf_rank": 2,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_3b7ae6d712325002",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 2,
+            "bm25_rank": 1,
+            "rrf_rank": 1,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_1a193701afdcdb30",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 4,
+            "bm25_rank": 2,
+            "rrf_rank": 3,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 5,
+            "bm25_rank": 7,
+            "rrf_rank": 5,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_f7a73a43ccb42135",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Piping and Instrumentation Diagrams (P&IDs)",
+            "vector_rank": 7,
+            "bm25_rank": 5,
+            "rrf_rank": 6,
+            "reranker_rank": 5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "What standards govern safety instrumented systems?",
+    "modes": {
+      "vector": {
+        "total_duration_s": 4.1623,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_2fb8618912ad708d",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_2d36f20344ee1bd8",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.2 Governing Standards and Compliance Frameworks",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_c83ef802ba4c475c",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_8ce1adf8bdb8e177",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_6c5a01565948bd24",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.3 Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "hybrid": {
+        "total_duration_s": 4.1147,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_2fb8618912ad708d",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 1,
+            "bm25_rank": 2,
+            "rrf_rank": 1,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_c83ef802ba4c475c",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 3,
+            "bm25_rank": 1,
+            "rrf_rank": 2,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_2d36f20344ee1bd8",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.2 Governing Standards and Compliance Frameworks",
+            "vector_rank": 2,
+            "bm25_rank": 3,
+            "rrf_rank": 3,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_8ce1adf8bdb8e177",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 4,
+            "bm25_rank": 7,
+            "rrf_rank": 4,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_6c5a01565948bd24",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.3 Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 5,
+            "bm25_rank": 10,
+            "rrf_rank": 5,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "vector-rerank": {
+        "total_duration_s": 11.6618,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_c83ef802ba4c475c",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_2fb8618912ad708d",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_2d36f20344ee1bd8",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.2 Governing Standards and Compliance Frameworks",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_8ce1adf8bdb8e177",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_95e1ee4b98a28571",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Sizing, Selection, and Specification",
+            "vector_rank": 7,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 5
+          }
+        ]
+      },
+      "hybrid-rerank": {
+        "total_duration_s": 12.0037,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_c83ef802ba4c475c",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 3,
+            "bm25_rank": 1,
+            "rrf_rank": 2,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_2fb8618912ad708d",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 1,
+            "bm25_rank": 2,
+            "rrf_rank": 1,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_2d36f20344ee1bd8",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.2 Governing Standards and Compliance Frameworks",
+            "vector_rank": 2,
+            "bm25_rank": 3,
+            "rrf_rank": 3,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_8ce1adf8bdb8e177",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 4,
+            "bm25_rank": 7,
+            "rrf_rank": 4,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_95e1ee4b98a28571",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Sizing, Selection, and Specification",
+            "vector_rank": 7,
+            "bm25_rank": 9,
+            "rrf_rank": 6,
+            "reranker_rank": 5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "Find information related to IEC 61511.",
+    "modes": {
+      "vector": {
+        "total_duration_s": 4.4816,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_8d8e031d2a9545d4",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Conclusions and Synthesis",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_2fb8618912ad708d",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_c83ef802ba4c475c",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_6c5a01565948bd24",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.3 Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_95133c9536668ec9",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Outputs to Electrical Engineering",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "hybrid": {
+        "total_duration_s": 4.4605,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_8d8e031d2a9545d4",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Conclusions and Synthesis",
+            "vector_rank": 1,
+            "bm25_rank": 3,
+            "rrf_rank": 1,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_6c5a01565948bd24",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.3 Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 4,
+            "bm25_rank": 1,
+            "rrf_rank": 2,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_c83ef802ba4c475c",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 3,
+            "bm25_rank": 2,
+            "rrf_rank": 3,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_2fb8618912ad708d",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 2,
+            "bm25_rank": 7,
+            "rrf_rank": 4,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_95133c9536668ec9",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Outputs to Electrical Engineering",
+            "vector_rank": 5,
+            "bm25_rank": 9,
+            "rrf_rank": 5,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "vector-rerank": {
+        "total_duration_s": 11.5219,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_6c5a01565948bd24",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.3 Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_8d8e031d2a9545d4",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Conclusions and Synthesis",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_c83ef802ba4c475c",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_0edfe072b7e7f095",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section  5:  Categorized  C&I  Deliverables:  Installation  and  Construction Documents",
+            "vector_rank": 10,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_f3fa0ad5ee8546ee",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Outputs to Electrical Engineering",
+            "vector_rank": 7,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 5
+          }
+        ]
+      },
+      "hybrid-rerank": {
+        "total_duration_s": 16.1426,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_6c5a01565948bd24",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.3 Project Lifecycle Phasing and C&I Scope Evolution",
+            "vector_rank": 4,
+            "bm25_rank": 1,
+            "rrf_rank": 2,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_8d8e031d2a9545d4",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Conclusions and Synthesis",
+            "vector_rank": 1,
+            "bm25_rank": 3,
+            "rrf_rank": 1,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_c83ef802ba4c475c",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Standards and Guidelines",
+            "vector_rank": 3,
+            "bm25_rank": 2,
+            "rrf_rank": 3,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_0edfe072b7e7f095",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Section  5:  Categorized  C&I  Deliverables:  Installation  and  Construction Documents",
+            "vector_rank": 10,
+            "bm25_rank": 23,
+            "rrf_rank": 8,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_f3fa0ad5ee8546ee",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Outputs to Electrical Engineering",
+            "vector_rank": 7,
+            "bm25_rank": null,
+            "rrf_rank": 16,
+            "reranker_rank": 5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "Explain the role of control valves.",
+    "modes": {
+      "vector": {
+        "total_duration_s": 4.3871,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_0595c9a35facf075",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Functional Use",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_194ad7f7db29b766",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Functional Use",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_7a0d6bb9d1626b1f",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "4.1 Control Philosophy and Control Narratives",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_743052eaa35412db",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Purpose and Content",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_f60bd19ee5f5b8a3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Functional Use",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "hybrid": {
+        "total_duration_s": 4.3584,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_94ec3f7b52e29ed2",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": 6,
+            "bm25_rank": 8,
+            "rrf_rank": 1,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_95e1ee4b98a28571",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Sizing, Selection, and Specification",
+            "vector_rank": 15,
+            "bm25_rank": 1,
+            "rrf_rank": 2,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_194ad7f7db29b766",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Functional Use",
+            "vector_rank": 2,
+            "bm25_rank": 14,
+            "rrf_rank": 3,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_7a0d6bb9d1626b1f",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "4.1 Control Philosophy and Control Narratives",
+            "vector_rank": 3,
+            "bm25_rank": 13,
+            "rrf_rank": 4,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_12c5e3215ad8cfff",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": 10,
+            "bm25_rank": 6,
+            "rrf_rank": 5,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "vector-rerank": {
+        "total_duration_s": 11.9972,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_95e1ee4b98a28571",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Sizing, Selection, and Specification",
+            "vector_rank": 15,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_7a0d6bb9d1626b1f",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "4.1 Control Philosophy and Control Narratives",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_743052eaa35412db",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Purpose and Content",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_0595c9a35facf075",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Functional Use",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_f60bd19ee5f5b8a3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Functional Use",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 5
+          }
+        ]
+      },
+      "hybrid-rerank": {
+        "total_duration_s": 12.9931,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_95e1ee4b98a28571",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Sizing, Selection, and Specification",
+            "vector_rank": 15,
+            "bm25_rank": 1,
+            "rrf_rank": 2,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_7a0d6bb9d1626b1f",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "4.1 Control Philosophy and Control Narratives",
+            "vector_rank": 3,
+            "bm25_rank": 13,
+            "rrf_rank": 4,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_743052eaa35412db",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Purpose and Content",
+            "vector_rank": 4,
+            "bm25_rank": 24,
+            "rrf_rank": 10,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_0595c9a35facf075",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Functional Use",
+            "vector_rank": 1,
+            "bm25_rank": 21,
+            "rrf_rank": 7,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 25,
+            "bm25_rank": 3,
+            "rrf_rank": 9,
+            "reranker_rank": 5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "PT-101 tag number",
+    "modes": {
+      "vector": {
+        "total_duration_s": 4.3447,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_e371a3068111a175",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_8c35dcfa9c247df6",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Preliminary Sizing and Configuration",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_0a1de64c3a3b4ba7",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "4. FORM FIELDS & MIXED ANNOTATIONS",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_7e017bc6b3c53740",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Issuance Status Significance",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "hybrid": {
+        "total_duration_s": 4.0721,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 2,
+            "bm25_rank": 1,
+            "rrf_rank": 1,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_e371a3068111a175",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content",
+            "vector_rank": 1,
+            "bm25_rank": 2,
+            "rrf_rank": 2,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_0a1de64c3a3b4ba7",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "4. FORM FIELDS & MIXED ANNOTATIONS",
+            "vector_rank": 4,
+            "bm25_rank": 9,
+            "rrf_rank": 3,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_df5ca6e2fa22b880",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Defining Operational Needs and User Functional Requirements (UFR)",
+            "vector_rank": 14,
+            "bm25_rank": 5,
+            "rrf_rank": 4,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_8a6a32d50e24bee3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "4.2 Input/Output (I/O) Lists and Schedules",
+            "vector_rank": 30,
+            "bm25_rank": 3,
+            "rrf_rank": 5,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "vector-rerank": {
+        "total_duration_s": 11.0017,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_e371a3068111a175",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_0a1de64c3a3b4ba7",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "4. FORM FIELDS & MIXED ANNOTATIONS",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_f8e8614f637b64dd",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Activity: Factory and Site Testing",
+            "vector_rank": 8,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_f60bd19ee5f5b8a3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Functional Use",
+            "vector_rank": 9,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 5
+          }
+        ]
+      },
+      "hybrid-rerank": {
+        "total_duration_s": 15.0246,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_94ec3f7b52e29ed2",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "1.1 Role, Mandate, and Criticality of C&I Engineering",
+            "vector_rank": null,
+            "bm25_rank": 4,
+            "rrf_rank": 9,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_49f05b914b35d81c",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "2. COMPLEX DATA TABLE (STRUCTURED EXTRACTION)",
+            "vector_rank": null,
+            "bm25_rank": 7,
+            "rrf_rank": 13,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 2,
+            "bm25_rank": 1,
+            "rrf_rank": 1,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_8a6a32d50e24bee3",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "4.2 Input/Output (I/O) Lists and Schedules",
+            "vector_rank": 30,
+            "bm25_rank": 3,
+            "rrf_rank": 5,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_e371a3068111a175",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content",
+            "vector_rank": 1,
+            "bm25_rank": 2,
+            "rrf_rank": 2,
+            "reranker_rank": 5
+          }
+        ]
+      }
+    }
+  },
+  {
+    "query": "OCR benchmark table accuracy",
+    "modes": {
+      "vector": {
+        "total_duration_s": 4.0913,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_aa9bfb453c944f1f",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "DOCUMENT PARSING TEST SUITE",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_6a0e8586b9758c4f",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "Side Note / Margin Callout:",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_5c391fcc4492a628",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "1. MULTI-COLUMN LAYOUT & TEXT FLOW",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_49f05b914b35d81c",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "2. COMPLEX DATA TABLE (STRUCTURED EXTRACTION)",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_0a1de64c3a3b4ba7",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "4. FORM FIELDS & MIXED ANNOTATIONS",
+            "vector_rank": 5,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "hybrid": {
+        "total_duration_s": 3.9327,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_aa9bfb453c944f1f",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "DOCUMENT PARSING TEST SUITE",
+            "vector_rank": 1,
+            "bm25_rank": 2,
+            "rrf_rank": 1,
+            "reranker_rank": null
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_49f05b914b35d81c",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "2. COMPLEX DATA TABLE (STRUCTURED EXTRACTION)",
+            "vector_rank": 4,
+            "bm25_rank": 1,
+            "rrf_rank": 2,
+            "reranker_rank": null
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_6a0e8586b9758c4f",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "Side Note / Margin Callout:",
+            "vector_rank": 2,
+            "bm25_rank": 3,
+            "rrf_rank": 3,
+            "reranker_rank": null
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_5c391fcc4492a628",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "1. MULTI-COLUMN LAYOUT & TEXT FLOW",
+            "vector_rank": 3,
+            "bm25_rank": 4,
+            "rrf_rank": 4,
+            "reranker_rank": null
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_06d253c359f4c45f",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": null,
+            "vector_rank": 7,
+            "bm25_rank": 6,
+            "rrf_rank": 5,
+            "reranker_rank": null
+          }
+        ]
+      },
+      "vector-rerank": {
+        "total_duration_s": 13.3101,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_49f05b914b35d81c",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "2. COMPLEX DATA TABLE (STRUCTURED EXTRACTION)",
+            "vector_rank": 4,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_5c391fcc4492a628",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "1. MULTI-COLUMN LAYOUT & TEXT FLOW",
+            "vector_rank": 3,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_aa9bfb453c944f1f",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "DOCUMENT PARSING TEST SUITE",
+            "vector_rank": 1,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_6a0e8586b9758c4f",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "Side Note / Margin Callout:",
+            "vector_rank": 2,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 14,
+            "bm25_rank": null,
+            "rrf_rank": null,
+            "reranker_rank": 5
+          }
+        ]
+      },
+      "hybrid-rerank": {
+        "total_duration_s": 14.8864,
+        "top5": [
+          {
+            "rank": 1,
+            "chunk_id": "chunk_49f05b914b35d81c",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "2. COMPLEX DATA TABLE (STRUCTURED EXTRACTION)",
+            "vector_rank": 4,
+            "bm25_rank": 1,
+            "rrf_rank": 2,
+            "reranker_rank": 1
+          },
+          {
+            "rank": 2,
+            "chunk_id": "chunk_5c391fcc4492a628",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "1. MULTI-COLUMN LAYOUT & TEXT FLOW",
+            "vector_rank": 3,
+            "bm25_rank": 4,
+            "rrf_rank": 4,
+            "reranker_rank": 2
+          },
+          {
+            "rank": 3,
+            "chunk_id": "chunk_aa9bfb453c944f1f",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "DOCUMENT PARSING TEST SUITE",
+            "vector_rank": 1,
+            "bm25_rank": 2,
+            "rrf_rank": 1,
+            "reranker_rank": 3
+          },
+          {
+            "rank": 4,
+            "chunk_id": "chunk_6a0e8586b9758c4f",
+            "source_filename": "scanned_docling_test_image_only.pdf",
+            "section_title": "Side Note / Margin Callout:",
+            "vector_rank": 2,
+            "bm25_rank": 3,
+            "rrf_rank": 3,
+            "reranker_rank": 4
+          },
+          {
+            "rank": 5,
+            "chunk_id": "chunk_1b9d6d167bfc02de",
+            "source_filename": "Instrumentation-and-Control-Engineering.pdf",
+            "section_title": "Key Content and Role",
+            "vector_rank": 14,
+            "bm25_rank": 11,
+            "rrf_rank": 10,
+            "reranker_rank": 5
+          }
+        ]
+      }
+    }
+  }
+]

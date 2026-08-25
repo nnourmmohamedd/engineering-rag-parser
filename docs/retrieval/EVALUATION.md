@@ -122,6 +122,99 @@ Limitations section) — never presented as a verified relevance judgment.
    with the implementer's reading of the source text," not "does retrieval
    agree with Nour's verified ground truth," until that review lands.
 
+## Cross-mode comparison (this milestone)
+
+The identical 20-case dataset, corpus, K values, and metric implementations
+were run through all four modes on 2026-08-25
+(`data/output/retrieval/20260825T122924Z-ddbc2719` vector,
+`.../20260825T122945Z-deab0ac4` hybrid,
+`.../20260825T123007Z-683212eb` vector-rerank,
+`.../20260825T123433Z-80f75a75` hybrid-rerank):
+
+| Metric | Vector | Hybrid | Vector+Rerank | Hybrid+Rerank | Best |
+|---|---|---|---|---|---|
+| Hit Rate@1 | 0.889 | 0.778 | 0.722 | 0.667 | Vector |
+| Recall@1 | 0.648 | 0.593 | 0.583 | 0.556 | Vector |
+| Precision@1 | 0.889 | 0.778 | 0.722 | 0.667 | Vector |
+| nDCG@1 | 0.889 | 0.778 | 0.722 | 0.667 | Vector |
+| Hit Rate@3 | 1.000 | 1.000 | 0.944 | 0.944 | Vector/Hybrid (tie) |
+| Recall@3 | 0.787 | 0.833 | 0.759 | 0.759 | Hybrid |
+| Precision@3 | 0.389 | 0.426 | 0.370 | 0.370 | Hybrid |
+| nDCG@3 | 0.799 | 0.804 | 0.738 | 0.726 | Hybrid |
+| Hit Rate@5 | 1.000 | 1.000 | 1.000 | 1.000 | tie |
+| Recall@5 | 0.926 | 0.917 | 0.898 | 0.852 | Vector |
+| Precision@5 | 0.300 | 0.300 | 0.289 | 0.267 | Vector/Hybrid (tie) |
+| nDCG@5 | 0.875 | 0.852 | 0.812 | 0.776 | Vector |
+| Hit Rate@10 | 1.000 | 1.000 | 1.000 | 1.000 | tie |
+| Recall@10 | 0.972 | 1.000 | 1.000 | 0.972 | Hybrid/Vector+Rerank (tie) |
+| Precision@10 | 0.161 | 0.167 | 0.167 | 0.161 | Hybrid/Vector+Rerank (tie) |
+| nDCG@10 | 0.895 | 0.883 | 0.854 | 0.828 | Vector |
+| MRR | 0.944 | 0.880 | 0.819 | 0.792 | **Vector** |
+| Latency p50 | 105.9 ms | 57.8 ms | 4361.4 ms | 5321.2 ms | Hybrid |
+| Latency p95 | 178.2 ms | 81.8 ms | 6306.1 ms | 6464.6 ms | Hybrid |
+
+**Honest reading of this table — do not skip.** On this specific 20-case,
+122-chunk corpus, **vector-only retrieval has the best overall MRR and wins
+or ties on most K/metric combinations**; hybrid edges ahead narrowly at K=3
+and K=10 recall/precision (BM25's exact-term matches add relevant chunks the
+vector ranking pushed just past the cutoff), and **both reranking modes
+measurably underperform their non-reranked counterpart on this dataset**.
+This is not a partial result being hidden — it is the actual outcome of a
+real, reproducible run, reported exactly as measured.
+
+**Why reranking looks worse here, and why that is plausible rather than a
+bug:** every ground-truth query in this 20-case set was authored against a
+corpus vector search already handles well (Hit Rate@3 = 1.000 for vector
+alone) — there is very little "headroom" left for a second-stage reranker to
+recover. `BAAI/bge-reranker-base` was verified (see
+`docs/retrieval/HYBRID_RETRIEVAL_ARCHITECTURE.md`) to produce sensible,
+monotonic scores on hand-built relevant/irrelevant pairs, so the mechanism
+itself works; on this dataset it occasionally reorders a correct top-1/top-3
+hit below a topically-adjacent distractor pulled into the `candidate_top_k`
+pool by fusion. A larger or noisier corpus, or queries deliberately chosen to
+need cross-encoder-style disambiguation, would be needed to test whether
+reranking helps in this codebase's actual production setting — this
+milestone did not fabricate that evidence because it does not have it.
+
+Disagreement vs. the vector-only baseline (by per-case reciprocal rank,
+same 20 cases):
+
+| Mode | Improved | Unchanged | Degraded |
+|---|---|---|---|
+| Hybrid | 0 | 18 | 2 |
+| Vector+Rerank | 0 | 15 | 5 |
+| Hybrid+Rerank | 0 | 14 | 6 |
+
+A per-query, per-mode inspection artifact — every query, its ground-truth
+`relevant_chunk_ids`, and the top-5 retrieved ids and hit/MRR outcome from
+all four modes — is versioned at
+`data/eval/hybrid_retrieval_human_review_worksheet.jsonl` for manual review
+alongside the label human-review process below.
+
+### Acceptance queries (8 required queries, all 4 modes)
+
+`data/eval/hybrid_retrieval_acceptance_queries.json` records the top-5
+result (chunk_id, source, section, and every per-stage rank) from every mode
+for these 8 queries, run against the real collection:
+
+1. "What activities are performed during the FEED phase?"
+2. "Why is instrumentation and control engineering important?"
+3. "What is an instrument index?"
+4. "What standards govern safety instrumented systems?"
+5. "Find information related to IEC 61511." (exact standard identifier)
+6. "Explain the role of control valves."
+7. "PT-101 tag number" (exact engineering identifier present in the corpus)
+8. "OCR benchmark table accuracy" (targets the OCR-derived document)
+
+Note on latency in this evidence file: it was produced by calling
+`run_hybrid_search()` once per query/mode combination, which (unlike
+`evaluate`'s `HybridRetriever`) constructs a fresh embedder and, for
+reranking modes, a fresh cross-encoder on every call — so its per-call
+totals (4-16 s) are dominated by repeated model construction, not
+representative query latency. The `evaluate` command's `latency_p50_s` /
+`latency_p95_s` (reported above) reuse one `HybridRetriever` across all 20
+cases and are the correct latency reference.
+
 ## Interpreting a run
 
 `retrieval_evaluation_summary.md` in each run directory renders a metrics
@@ -149,6 +242,16 @@ versions, so a run is fully reproducible.
   from an earlier index rebuild will never match.
 
 ## Reproduction
+
+```powershell
+.\.venv\Scripts\engrag-retrieve.exe build-bm25 --profile configs\retrieval_production.yaml
+.\.venv\Scripts\engrag-retrieve.exe evaluate --profile configs\retrieval_production.yaml --mode vector
+.\.venv\Scripts\engrag-retrieve.exe evaluate --profile configs\retrieval_production.yaml --mode hybrid
+.\.venv\Scripts\engrag-retrieve.exe evaluate --profile configs\retrieval_production.yaml --mode vector-rerank
+.\.venv\Scripts\engrag-retrieve.exe evaluate --profile configs\retrieval_production.yaml --mode hybrid-rerank
+```
+
+Single-mode reproduction:
 
 ```powershell
 .\.venv\Scripts\engrag-retrieve.exe evaluate --profile configs\retrieval_production.yaml
