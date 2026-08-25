@@ -1,0 +1,54 @@
+# BGE-aligned chunking profile — same hierarchical-first, conditional
+# recursive-splitting behaviour as chunker_production.yaml, but sized for the
+# embedding model used by the embedding/indexing milestone:
+# BAAI/bge-base-en-v1.5 (max_seq_length=512, 768-d output).
+#
+# Scaling reasoning (kept proportional to chunker_production.yaml's ratios,
+# which were tuned around all-MiniLM-L6-v2's max_tokens=256):
+#   max_tokens:          256 -> 512   (BGE's own trained max_seq_length; using the
+#                                      full budget avoids silent truncation)
+#   target_tokens:       180 -> 400   (~70% of max_tokens, same ratio as before:
+#                                      180/256 ≈ 0.70, 400/512 ≈ 0.78 — nudged up
+#                                      slightly since BGE handles the longer
+#                                      context well and headroom is still ample)
+#   min_chunk_tokens:     40 -> 64    (~25% of target_tokens, close to the
+#                                      original 40/180 ≈ 0.22 ratio)
+#   text_overlap_tokens:  32 -> 64    (~16% of target_tokens vs original
+#                                      32/180 ≈ 0.18 — keeps overlap
+#                                      proportionally similar)
+#
+# See docs/chunker/CONFIGURATION.md for what each parameter controls, and
+# docs/indexing/ (added by the embedding milestone) for why the MiniLM-tokenized
+# chunker_production.yaml runs are incompatible with BGE-based indexing.
+
+profile: production
+
+tokenizer:
+  name: BAAI/bge-base-en-v1.5   # 109M params, MIT, English retrieval-tuned embedding model
+  revision: null
+  trust_remote_code: false
+
+max_tokens: 512            # BGE's own trained max_seq_length
+target_tokens: 400          # leaves headroom below max_tokens for heading/caption context
+min_chunk_tokens: 64        # below this, a chunk is a merge candidate
+text_overlap_tokens: 64     # recursively-split TEXT siblings only
+
+recursive_separators:
+  - "\n\n"
+  - "\n"
+  - ". "
+  - "! "
+  - "? "
+  - "; "
+  - ", "
+  - " "
+  - ""
+
+merge_small_chunks: true
+repeat_table_headers: true
+include_heading_context: true
+allowed_atomic_overflow: true
+
+output_root: data/output/chunker
+
+log_level: INFO
