@@ -41,18 +41,41 @@ commit `c8b8ef712cf8b75b5abad2fe4f27a191fc0a16f6` (working tree clean, local
 
 ## 4. Commits
 
-See `git log feature/vector-retrieval-evaluation` for the exact list;
-recorded here after the final commit lands (this report is updated in the
-same PR before it opens — see the workflow this repository already
-established for the parser/chunker/indexing milestones).
+`873e687` — "Implement vector retrieval service, pipeline, and CLI
+(BAAI/bge-base-en-v1.5)", `248d411` — "Add tests and a real evidence-based
+ground-truth dataset for retrieval", `9df045a` — "Wire CI for
+engrag-retrieve and add retrieval milestone documentation", `46ca520` —
+"Fix: apply ruff format to the retrieval demo notebook", `a3dc486` — "Fix:
+remove terminal-width-dependent assertion in CLI help test", all on
+`feature/vector-retrieval-evaluation`, branched from verified `master` at
+`c8b8ef712cf8b75b5abad2fe4f27a191fc0a16f6`.
 
 ## 5. PR link
 
-Recorded after the PR is opened (§27).
+**Open, not merged.** https://github.com/nnourmmohamedd/engineering-rag-parser/pull/4
+— PR #4, "Vector retrieval + evidence-based retrieval evaluation
+(BAAI/bge-base-en-v1.5)".
 
 ## 6. CI status for Python 3.11 and 3.13
 
-Recorded after CI runs on the pushed branch.
+**Both PASS** on the final pushed commit (`a3dc486`, run `32837562046`):
+`quality (3.11)` 3m40s, `quality (3.13)` 4m6s.
+
+Two earlier runs on this branch failed and were fixed in follow-up commits,
+both caught by CI exactly as intended (root causes below, no gate was
+weakened to get around either):
+
+- Run `32836664910` (commit `9df045a`): `ruff format --check` failed — the
+  demo notebook was built directly with `nbformat`/executed with `nbclient`
+  and never run through `ruff format` locally. Fixed in `46ca520`
+  (formatting only, no content/output change).
+- Run `32836961135` (commit `46ca520`): `TestVersionAndHelp::test_search_help`
+  failed — asserted the literal substring `"--top-k"` in `--help` output,
+  which CI's headless 80-column terminal wraps differently than a wide local
+  terminal. The existing CLI suites (`test_cli.py`, `test_index_cli.py`,
+  `test_chunker_cli.py`) deliberately only assert `exit_code == 0` for
+  subcommand `--help` for exactly this reason; fixed in `a3dc486` by
+  matching that established convention.
 
 ## 7. Architecture created
 
@@ -227,13 +250,12 @@ truth. See `docs/retrieval/EVALUATION.md`'s human-review checklist.
 
 ## 23. Working-tree status
 
-Clean after the final commit on `feature/vector-retrieval-evaluation` (this
-report is updated once, in the same PR, with the recorded commit hash — see
-§4).
+Clean after the final commit (`a3dc486`) on `feature/vector-retrieval-evaluation`.
 
 ## 24. Whether the PR is ready to merge
 
-Recorded after CI passes on the pushed branch (§6, §27).
+CI is green on both Python 3.11 and 3.13 (§6). **Not merged, as instructed**
+— PR #4 is open and ready for review/merge at the user's discretion.
 
 ## 25. Exact next milestone
 
