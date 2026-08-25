@@ -95,6 +95,7 @@ jobs:
         run: |
           python -c "import nbformat; nbformat.validate(nbformat.read('notebooks/01_docling_exploration.ipynb', as_version=4))"
           python -c "import nbformat; nbformat.validate(nbformat.read('notebooks/02_embedding_indexing_demo.ipynb', as_version=4))"
+          python -c "import nbformat; nbformat.validate(nbformat.read('notebooks/03_retrieval_evaluation_demo.ipynb', as_version=4))"
 
       - name: Build the wheel
         run: python -m build --wheel
@@ -126,6 +127,9 @@ jobs:
               'engineering_rag/databases/chroma/__init__.py',
               'engineering_rag/pipelines/indexing_pipeline.py',
               'engineering_rag/api/index_cli.py',
+              'engineering_rag/services/retriever/__init__.py',
+              'engineering_rag/pipelines/retrieval_pipeline.py',
+              'engineering_rag/api/retrieve_cli.py',
               'engineering_rag/utils/logging.py',
           ]
           missing = [r for r in required if not any(n.endswith(r) for n in names)]
