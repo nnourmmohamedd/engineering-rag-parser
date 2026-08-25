@@ -52,14 +52,21 @@ remove terminal-width-dependent assertion in CLI help test", all on
 
 ## 5. PR link
 
-**Open, not merged.** https://github.com/nnourmmohamedd/engineering-rag-parser/pull/4
+**Merged.** https://github.com/nnourmmohamedd/engineering-rag-parser/pull/4
 — PR #4, "Vector retrieval + evidence-based retrieval evaluation
-(BAAI/bge-base-en-v1.5)".
+(BAAI/bge-base-en-v1.5)", merged into `master` as fast-forward merge commit
+`0b7f6600a1781cf3f79d62cb276abe23b7fe0c67` on 2026-08-25T10:45:36Z.
 
 ## 6. CI status for Python 3.11 and 3.13
 
-**Both PASS** on the final pushed commit (`a3dc486`, run `32837562046`):
-`quality (3.11)` 3m40s, `quality (3.13)` 4m6s.
+**Both PASS**, on every relevant run:
+- PR run `32837562046` (commit `a3dc486`): `quality (3.11)` 3m40s,
+  `quality (3.13)` 4m6s.
+- PR run `32837995427` (after the completion-report update commit
+  `b06d833`): both green again.
+- **Post-merge run on `master` itself** (`32838826020`, merge commit
+  `0b7f660`): `quality (3.11)` **3m46s**, `quality (3.13)` **3m53s**, both
+  green.
 
 Two earlier runs on this branch failed and were fixed in follow-up commits,
 both caught by CI exactly as intended (root causes below, no gate was
@@ -76,6 +83,9 @@ weakened to get around either):
   `test_chunker_cli.py`) deliberately only assert `exit_code == 0` for
   subcommand `--help` for exactly this reason; fixed in `a3dc486` by
   matching that established convention.
+
+No CI fix was needed at any point after `a3dc486` — the merge itself
+(fast-forward, no merge commit content changes) required no additional work.
 
 ## 7. Architecture created
 
@@ -250,12 +260,19 @@ truth. See `docs/retrieval/EVALUATION.md`'s human-review checklist.
 
 ## 23. Working-tree status
 
-Clean after the final commit (`a3dc486`) on `feature/vector-retrieval-evaluation`.
+Clean on `master` at merge commit `0b7f6600a1781cf3f79d62cb276abe23b7fe0c67`;
+local `master` verified equal to `origin/master`; the merged feature branch
+was deleted both locally and on the remote (already auto-deleted by GitHub
+on merge).
 
-## 24. Whether the PR is ready to merge
+## 24. Merge status
 
-CI is green on both Python 3.11 and 3.13 (§6). **Not merged, as instructed**
-— PR #4 is open and ready for review/merge at the user's discretion.
+**Merged.** PR #4 merged into `master` as fast-forward commit `0b7f660` on
+2026-08-25T10:45:36Z. Post-merge CI on `master` itself is green on both
+Python 3.11 and 3.13 (§6). Post-merge verification confirmed:
+`engrag-retrieve --version`/`inspect`/`validate` all run correctly against
+the live collection, `ruff format --check .` and `ruff check .` both pass,
+and the working tree is clean.
 
 ## 25. Exact next milestone
 
