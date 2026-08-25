@@ -39,17 +39,28 @@ audit time, repository-local author `Nour Mohamed`, email unchanged).
 
 ## 4. Commit hash(es)
 
-Recorded at commit time below (this report is written and committed as part
-of the same feature branch before the PR is opened).
+`9938726` — "Implement BGE embedding service and ChromaDB indexing adapter"
+(core services/embedder + databases/chroma + pipelines/indexing_* + CLI +
+`configs/chunker_bge.yaml`/`configs/indexing_production.yaml`), `228c83d` —
+"Add tests for the embedding/indexing milestone", `6c024f2` — "Wire CI for
+the indexing extra and add embedding milestone documentation", all on
+`feature/embedding-chroma-index`, branched from verified `master` at
+`4173850`.
 
 ## 5. PR URL
 
-Recorded once opened — see the final response accompanying this report.
+**Open, not merged.** https://github.com/nnourmmohamedd/engineering-rag-parser/pull/3
+— PR #3, "Embedding + ChromaDB indexing milestone (BAAI/bge-base-en-v1.5)".
 
 ## 6. CI status for Python 3.11 and 3.13
 
-Recorded once CI has run on the PR — see the final response accompanying
-this report.
+**Both PASS on the first run** (run `32827654942`, triggered by the PR).
+`quality (3.11)`: **3m14s**, all 16 steps green. `quality (3.13)`: **4m6s**,
+all 16 steps green. No CI fix was needed — the `indexing` extra was added to
+the install step proactively (see the CI commit message, `6c024f2`)
+specifically to avoid repeating the chunker milestone's PR #2 defect (a
+missing extra causing `ModuleNotFoundError` in CI, fixed there in
+`7151418`).
 
 ## 7. Final architecture
 
@@ -359,10 +370,11 @@ See `docs/indexing/COMMANDS.md` for the complete command reference.
 
 ## 34. Ready to merge?
 
-Recorded once CI has run on the PR — see the final response accompanying
-this report. Locally: all gates in §21–30 pass; nothing is merged without
-explicit instruction, per this milestone's explicit "do not merge unless
-told to" constraint.
+**Technically yes** — CI is green on both Python 3.11 and 3.13 (§6), all
+local gates in §21–30 pass, and real-corpus acceptance evidence (§17–22, 30)
+is recorded. **Not merged** — per this milestone's explicit "do not merge
+unless told to" constraint, PR #3 remains open awaiting an explicit merge
+instruction.
 
 ## 35. Ready for the vector-retrieval milestone?
 
