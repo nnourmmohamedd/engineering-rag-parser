@@ -43,24 +43,32 @@ audit time, repository-local author `Nour Mohamed`, email unchanged).
 (core services/embedder + databases/chroma + pipelines/indexing_* + CLI +
 `configs/chunker_bge.yaml`/`configs/indexing_production.yaml`), `228c83d` —
 "Add tests for the embedding/indexing milestone", `6c024f2` — "Wire CI for
-the indexing extra and add embedding milestone documentation", all on
+the indexing extra and add embedding milestone documentation", `745e1bf` —
+"Record PR URL and green CI in the indexing completion report", all on
 `feature/embedding-chroma-index`, branched from verified `master` at
-`4173850`.
+`4173850`. **Merged into `master` as merge commit `c152636` on
+2026-08-25T08:50:22Z.**
 
 ## 5. PR URL
 
-**Open, not merged.** https://github.com/nnourmmohamedd/engineering-rag-parser/pull/3
-— PR #3, "Embedding + ChromaDB indexing milestone (BAAI/bge-base-en-v1.5)".
+**Merged.** https://github.com/nnourmmohamedd/engineering-rag-parser/pull/3
+— PR #3, "Embedding + ChromaDB indexing milestone (BAAI/bge-base-en-v1.5)",
+merged into `master` as merge commit `c152636` on 2026-08-25T08:50:22Z.
 
 ## 6. CI status for Python 3.11 and 3.13
 
-**Both PASS on the first run** (run `32827654942`, triggered by the PR).
-`quality (3.11)`: **3m14s**, all 16 steps green. `quality (3.13)`: **4m6s**,
-all 16 steps green. No CI fix was needed — the `indexing` extra was added to
-the install step proactively (see the CI commit message, `6c024f2`)
-specifically to avoid repeating the chunker milestone's PR #2 defect (a
-missing extra causing `ModuleNotFoundError` in CI, fixed there in
-`7151418`).
+**Both PASS**, on every relevant run:
+- PR run `32827654942`: `quality (3.11)` 3m14s, `quality (3.13)` 4m6s.
+- PR run `32828079299` (after the completion-report update commit
+  `745e1bf`): both green again.
+- **Post-merge run on `master` itself** (`32828707858`, the merge commit
+  `c152636`): `quality (3.11)` **3m37s**, `quality (3.13)` **3m49s**, both
+  green.
+
+No CI fix was needed at any point — the `indexing` extra was added to the
+install step proactively (see the CI commit message, `6c024f2`) specifically
+to avoid repeating the chunker milestone's PR #2 defect (a missing extra
+causing `ModuleNotFoundError` in CI, fixed there in `7151418`).
 
 ## 7. Final architecture
 
@@ -370,11 +378,14 @@ See `docs/indexing/COMMANDS.md` for the complete command reference.
 
 ## 34. Ready to merge?
 
-**Technically yes** — CI is green on both Python 3.11 and 3.13 (§6), all
-local gates in §21–30 pass, and real-corpus acceptance evidence (§17–22, 30)
-is recorded. **Not merged** — per this milestone's explicit "do not merge
-unless told to" constraint, PR #3 remains open awaiting an explicit merge
-instruction.
+**Yes — merged.** PR #3 merged into `master` as `c152636` on
+2026-08-25T08:50:22Z, after CI passed on both Python 3.11 and 3.13 (§6) on
+the PR itself, again after the report-only follow-up commit, and again on
+the merge commit on `master` directly. Local `master` is fast-forwarded to
+`c152636` and confirmed identical to `origin/master`. The feature branch
+`feature/embedding-chroma-index` no longer exists locally, and its deletion
+on the remote (via `gh pr merge --delete-branch`) is confirmed via `git
+fetch --prune`.
 
 ## 35. Ready for the vector-retrieval milestone?
 
