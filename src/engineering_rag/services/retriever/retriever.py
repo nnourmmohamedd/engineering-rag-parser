@@ -15,7 +15,7 @@ import json
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from engineering_rag.services.embedder.errors import EmptyQueryError
 from engineering_rag.services.embedder.interface import EmbeddingService
@@ -35,9 +35,23 @@ from .models import (
     query_hash,
 )
 
-__all__ = ["VectorRetriever"]
+__all__ = ["SearchableRetriever", "VectorRetriever"]
 
 logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class SearchableRetriever(Protocol):
+    """Structural type shared by :class:`VectorRetriever` and the hybrid orchestrator.
+
+    Lets ``services/retriever/evaluation/runner.py`` evaluate vector-only,
+    hybrid, vector+rerank, and hybrid+rerank searches through the identical
+    ``search(request) -> RetrievalResponse`` call, with no evaluation-side
+    branching on which mode is active.
+    """
+
+    def search(self, request: RetrievalRequest) -> RetrievalResponse: ...
+
 
 #: Chunk metadata fields that are JSON-encoded strings on write
 #: (see ``databases/chroma/metadata.py``) and must be decoded back to lists.
@@ -64,6 +78,8 @@ def _build_hit(
     meta = dict(metadata or {})
     return RetrievalHit(
         rank=rank,
+        final_rank=rank,
+        vector_rank=rank,
         chunk_id=chunk_id,
         retrieval_text=document or "",
         raw_distance=float(distance),

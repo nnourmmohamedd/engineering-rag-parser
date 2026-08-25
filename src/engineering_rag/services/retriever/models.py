@@ -27,7 +27,10 @@ __all__ = [
     "query_hash",
 ]
 
-RETRIEVAL_RESPONSE_SCHEMA_VERSION = "1.0.0"
+#: 1.1.0: additive-only extension for hybrid retrieval + reranking — every
+#: new field defaults to ``None``/empty so a 1.0.0 consumer reading a
+#: vector-only response sees identical values for every field it already knew.
+RETRIEVAL_RESPONSE_SCHEMA_VERSION = "1.1.0"
 
 
 def query_hash(query: str) -> str:
@@ -78,6 +81,26 @@ class RetrievalHit(_Model):
     source_element_refs: list[str] = Field(default_factory=list)
     content_hash: str | None = None
 
+    # --- Hybrid retrieval / reranking evidence (all None in vector-only mode) ---
+    final_rank: int | None = Field(
+        default=None,
+        description="Rank in the final returned list, after every enabled stage. Mirrors `rank`.",
+    )
+    vector_rank: int | None = Field(default=None, description="This chunk's rank in the vector-only ranking.")
+    bm25_rank: int | None = Field(default=None, description="This chunk's rank in the BM25-only ranking.")
+    bm25_score: float | None = Field(
+        default=None, description="Raw BM25 score, not comparable to vector distance."
+    )
+    rrf_rank: int | None = Field(default=None, description="This chunk's rank after Reciprocal Rank Fusion.")
+    rrf_score: float | None = Field(default=None, description="This chunk's Reciprocal Rank Fusion score.")
+    reranker_rank: int | None = Field(
+        default=None, description="This chunk's rank after cross-encoder reranking."
+    )
+    reranker_score: float | None = Field(
+        default=None,
+        description="Raw cross-encoder logit/sigmoid output. NOT a calibrated probability of relevance.",
+    )
+
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Full raw stored metadata, unfiltered."
     )
@@ -119,6 +142,24 @@ class RetrievalResponse(_Model):
     diagnostics: RetrievalDiagnostics = Field(default_factory=RetrievalDiagnostics)
     warnings: list[str] = Field(default_factory=list)
     generated_at_utc: datetime | None = None
+
+    # --- Hybrid retrieval / reranking run metadata (defaults preserve vector-only responses) ---
+    retrieval_mode: Literal["vector", "hybrid", "hybrid-rerank", "vector-rerank"] = "vector"
+    vector_enabled: bool = True
+    bm25_enabled: bool = False
+    reranker_enabled: bool = False
+    candidate_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Candidate count after each executed stage, e.g. "
+        "{'vector': 30, 'bm25': 30, 'fused': 45, 'reranked': 5}.",
+    )
+    stage_latencies_s: dict[str, float] = Field(
+        default_factory=dict, description="Wall-clock duration of each executed stage."
+    )
+    bm25_index_path: str | None = None
+    bm25_corpus_fingerprint: str | None = None
+    reranker_model: str | None = None
+    reranker_model_revision: str | None = None
 
 
 # --- Evaluation contracts --------------------------------------------------
@@ -196,6 +237,9 @@ class RetrievalEvaluationSummary(_Model):
     distance_metric: str
     embedding_model: str
     embedding_revision: str | None
+    retrieval_mode: str = "vector"
+    bm25_enabled: bool = False
+    reranker_enabled: bool = False
 
     hit_rate_at_k: dict[int, float] = Field(default_factory=dict)
     recall_at_k: dict[int, float] = Field(default_factory=dict)

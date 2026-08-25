@@ -8,15 +8,63 @@ already-existing ``EmbedderConfig`` and ``ChromaConfig``.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-__all__ = ["RetrievalEvaluationConfig", "RetrievalSearchConfig"]
+__all__ = ["FusionConfig", "RetrievalEvaluationConfig", "RetrievalModeConfig", "RetrievalSearchConfig"]
 
 
 class _Frozen(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class RetrievalModeConfig(_Frozen):
+    """Which retrieval stages run and how many candidates each contributes.
+
+    ``bm25_enabled`` / the reranker's own ``enabled`` flag are the only
+    stages a profile or CLI may turn off — ``vector_enabled`` is fixed
+    ``True`` because vector retrieval is the required base retriever for
+    every supported mode in this milestone.
+    """
+
+    vector_enabled: bool = Field(
+        default=True, description="Always true — vector retrieval is never disabled."
+    )
+    vector_top_k: int = Field(
+        default=30, gt=0, description="Candidates pulled from vector search before fusion."
+    )
+    bm25_enabled: bool = Field(default=False, description="Production default: off (vector-only).")
+    bm25_top_k: int = Field(default=30, gt=0, description="Candidates pulled from BM25 before fusion.")
+    final_top_k: int = Field(
+        default=5, gt=0, description="Results returned when neither RRF nor reranking apply."
+    )
+
+    @model_validator(mode="after")
+    def _validate(self) -> RetrievalModeConfig:
+        if not self.vector_enabled:
+            raise ValueError("retrieval.vector_enabled must remain true; vector retrieval cannot be disabled")
+        return self
+
+    def effective_dict(self) -> dict[str, Any]:
+        import json
+
+        return json.loads(self.model_dump_json())
+
+
+class FusionConfig(_Frozen):
+    """Reciprocal Rank Fusion parameters."""
+
+    method: Literal["rrf"] = "rrf"
+    rrf_k: int = Field(default=60, gt=0, description="RRF constant: RRF(doc) = sum(1 / (rrf_k + rank)).")
+    candidate_top_k: int = Field(
+        default=30, gt=0, description="How many fused candidates are kept before the next stage."
+    )
+
+    def effective_dict(self) -> dict[str, Any]:
+        import json
+
+        return json.loads(self.model_dump_json())
 
 
 class RetrievalSearchConfig(_Frozen):
