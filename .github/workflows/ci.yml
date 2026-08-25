@@ -48,17 +48,22 @@ jobs:
 
       - name: Install the project with dev tooling
         # `indexing` adds sentence-transformers + chromadb. `hybrid` adds
-        # bm25s (pure Python + numpy, no model download). Fast tests never
-        # download the real BGE embedding model or the real cross-encoder
-        # reranker (a deterministic fake embedder/reranker is used throughout
+        # bm25s (pure Python + numpy, no model download). `answering` adds
+        # httpx (already transitively installed via chromadb) for the local
+        # Ollama client, and reuses `chunking`'s transformers for the Qwen3
+        # tokenizer. Fast tests never download the real BGE embedding model,
+        # the real cross-encoder reranker, or call a real Ollama server (a
+        # deterministic fake embedder/reranker/LLM client is used throughout
         # tests/unit and tests/integration/databases — see
-        # tests/support/fake_embedder.py and tests/support/fake_reranker.py)
-        # and chromadb/bm25s both run fully local against tmp_path, so this
-        # install does not make fast CI depend on any network access beyond
-        # the install step itself.
+        # tests/support/fake_embedder.py, tests/support/fake_reranker.py,
+        # tests/support/fake_llm_client.py) and chromadb/bm25s both run fully
+        # local against tmp_path, so this install does not make fast CI
+        # depend on any network access beyond the install step itself (and
+        # the small, tokenizer-files-only Qwen3 tokenizer download the
+        # context-builder tests exercise -- a few MB, not a model weight).
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,chunking,indexing,hybrid]"
+          python -m pip install -e ".[dev,chunking,indexing,hybrid,answering]"
 
       - name: Ruff format check
         run: ruff format --check .
@@ -100,6 +105,7 @@ jobs:
           python -c "import nbformat; nbformat.validate(nbformat.read('notebooks/02_embedding_indexing_demo.ipynb', as_version=4))"
           python -c "import nbformat; nbformat.validate(nbformat.read('notebooks/03_retrieval_evaluation_demo.ipynb', as_version=4))"
           python -c "import nbformat; nbformat.validate(nbformat.read('notebooks/04_hybrid_retrieval_demo.ipynb', as_version=4))"
+          python -c "import nbformat; nbformat.validate(nbformat.read('notebooks/05_grounded_answering_demo.ipynb', as_version=4))"
 
       - name: Build the wheel
         run: python -m build --wheel
@@ -143,6 +149,19 @@ jobs:
               'engineering_rag/pipelines/retrieval_pipeline.py',
               'engineering_rag/api/retrieve_cli.py',
               'engineering_rag/utils/logging.py',
+              'engineering_rag/clients/ollama/__init__.py',
+              'engineering_rag/clients/ollama/http_client.py',
+              'engineering_rag/prompts/answering/__init__.py',
+              'engineering_rag/prompts/answering/contract.py',
+              'engineering_rag/services/context_builder/__init__.py',
+              'engineering_rag/services/context_builder/builder.py',
+              'engineering_rag/services/grounding/__init__.py',
+              'engineering_rag/services/grounding/validator.py',
+              'engineering_rag/services/answerer/__init__.py',
+              'engineering_rag/services/answerer/service.py',
+              'engineering_rag/pipelines/answering_pipeline.py',
+              'engineering_rag/pipelines/answering_evaluation.py',
+              'engineering_rag/api/ask_cli.py',
           ]
           missing = [r for r in required if not any(n.endswith(r) for n in names)]
           sys.exit(1) if missing else None
