@@ -45,8 +45,11 @@ class TestRetrievalRequest:
 
 class TestRetrievalHitAndResponseSerialization:
     def test_hit_never_reprs_full_vector(self) -> None:
+        # RetrievalHit has no raw embedding field at all — `vector_rank`/`vector_enabled`-style
+        # metadata fields are fine; an actual float-list embedding vector is not.
         hit = RetrievalHit(rank=1, chunk_id="c1", retrieval_text="text", raw_distance=0.1)
-        assert "vector" not in repr(hit)
+        assert not hasattr(hit, "vector")
+        assert not hasattr(hit, "embedding")
 
     def test_response_round_trips_through_json(self) -> None:
         hit = RetrievalHit(

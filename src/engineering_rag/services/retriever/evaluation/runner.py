@@ -1,10 +1,12 @@
 """Runs the retrieval benchmark: one query per ground-truth case, scored against relevance labels.
 
-Depends only on :class:`~engineering_rag.services.retriever.retriever.VectorRetriever`
-(already constructed and injected by the caller — this module never builds an
-embedder or a Chroma client itself) and the pure metric functions in
-``.metrics``. Produces one :class:`RetrievalEvaluationResult` per case plus
-one aggregate :class:`RetrievalEvaluationSummary`.
+Depends only on the :class:`~engineering_rag.services.retriever.retriever.SearchableRetriever`
+protocol (already constructed and injected by the caller — this module never
+builds an embedder, a Chroma client, a BM25 index, or a reranker itself), so
+the identical evaluation loop scores vector-only, hybrid, vector+rerank, and
+hybrid+rerank runs without branching on mode. Produces one
+:class:`RetrievalEvaluationResult` per case plus one aggregate
+:class:`RetrievalEvaluationSummary`.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from engineering_rag.services.retriever.models import (
     RetrievalEvaluationSummary,
     RetrievalRequest,
 )
-from engineering_rag.services.retriever.retriever import VectorRetriever
+from engineering_rag.services.retriever.retriever import SearchableRetriever
 
 from .metrics import (
     hit_rate_at_k,
@@ -37,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 def evaluate_case(
-    retriever: VectorRetriever,
+    retriever: SearchableRetriever,
     case: RetrievalEvaluationCase,
     *,
     k_values: list[int],
@@ -92,7 +94,7 @@ def evaluate_case(
 
 
 def run_evaluation(
-    retriever: VectorRetriever,
+    retriever: SearchableRetriever,
     cases: list[RetrievalEvaluationCase],
     *,
     run_id: str,
@@ -107,6 +109,9 @@ def run_evaluation(
     embedding_model: str,
     embedding_revision: str | None,
     reproduction_command: str,
+    retrieval_mode: str = "vector",
+    bm25_enabled: bool = False,
+    reranker_enabled: bool = False,
 ) -> tuple[list[RetrievalEvaluationResult], RetrievalEvaluationSummary]:
     """Evaluate every case and aggregate into a summary. Never calls an LLM or a paid API."""
     results = [
@@ -155,6 +160,9 @@ def run_evaluation(
         distance_metric=distance_metric,
         embedding_model=embedding_model,
         embedding_revision=embedding_revision,
+        retrieval_mode=retrieval_mode,
+        bm25_enabled=bm25_enabled,
+        reranker_enabled=reranker_enabled,
         hit_rate_at_k=_mean_by_k(positive, "hit_rate_at_k", k_values),
         recall_at_k=_mean_by_k(positive, "recall_at_k", k_values),
         precision_at_k=_mean_by_k(positive, "precision_at_k", k_values),

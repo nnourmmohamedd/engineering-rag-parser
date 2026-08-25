@@ -83,6 +83,7 @@ MIT-CMU). Two consequences:
 |---|---|---|---|
 | `[ocr]` | `easyocr` | Apache-2.0 | Only for genuinely scanned documents. Downloads ~100 MB of detection/recognition weights on first use. **Not installed in the verified environment** — the acceptance document is digitally generated and needs no OCR. |
 | `[vlm]` | `transformers`, `accelerate` | Apache-2.0 | Optional local picture description. Disabled by default ([ADR-005](TASKS.md#adr-005--no-vlm-picture-description-in-the-default-path)). |
+| `[hybrid]` | `bm25s` (0.3.11 verified) | MIT | Persistent local BM25 lexical index (hybrid retrieval milestone). Pure Python + numpy, no server, no network at query time. https://github.com/xhluca/bm25s |
 
 ---
 
@@ -97,6 +98,7 @@ separate from the code licenses above.
 | TableFormer (`docling-ibm-models`) | Table structure recovery | MIT (per model card) | ~140 MB |
 | `HuggingFaceTB/SmolVLM-256M-Instruct` | Optional picture description | Apache-2.0 | ~500 MB — **not downloaded**, VLM disabled by default |
 | EasyOCR detection/recognition | Optional OCR | Apache-2.0 | ~100 MB — **not downloaded**, OCR disabled by default |
+| `BAAI/bge-reranker-base` (revision `2cfc18c9415c912f9d8155881c133215df768a70`) | Optional cross-encoder reranking (hybrid retrieval milestone) | Apache-2.0 (per model card/repo) | ~280 MB — loaded only when `reranker.enabled: true`; disabled by default |
 
 Weights land in the standard Hugging Face cache unless `docling.artifacts_path`
 is set. Verify the current model card before redistributing weights: a model

@@ -61,6 +61,12 @@ chunking = ["transformers>=4.45", "langchain-text-splitters>=0.3"]
 # incompatible major that changed the PersistentClient/Collection API this
 # adapter relies on.
 indexing = ["sentence-transformers>=6.0,<7", "chromadb>=1.5,<2"]
+# Hybrid retrieval: persistent local BM25 lexical index (bm25s -- MIT license,
+# pure Python + numpy, no server, no network at query time; version pinned to
+# the floor actually installed and verified during development). Cross-encoder
+# reranking (BAAI/bge-reranker-base) reuses sentence-transformers already
+# declared under `indexing` -- no separate reranker dependency is needed.
+hybrid = ["bm25s>=0.3,<0.4"]
 # Development tooling. Duplicated (deliberately) into [dependency-groups] below:
 # `pip install -e ".[dev]"` works on every supported pip version, while
 # `pip install -e . --group dev` (PEP 735, pip >= 25.1) is the modern equivalent.

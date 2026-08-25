@@ -17,9 +17,15 @@ import yaml
 from typer.testing import CliRunner
 
 import engineering_rag.api.retrieve_cli as cli_module
-from engineering_rag.api.retrieve_cli import app
+from engineering_rag.api.retrieve_cli import _resolve_toggles, app
+from engineering_rag.databases.bm25.models import BM25Manifest
 from engineering_rag.pipelines.retrieval_pipeline import InspectionReport, ValidationReport
-from engineering_rag.services.retriever import RETRIEVER_VERSION, InvalidFilterError, RetrievalError
+from engineering_rag.services.retriever import (
+    RETRIEVER_VERSION,
+    CorpusCompatibilityError,
+    InvalidFilterError,
+    RetrievalError,
+)
 from engineering_rag.services.retriever.models import (
     RetrievalEvaluationSummary,
     RetrievalHit,
@@ -88,7 +94,7 @@ class TestVersionAndHelp:
 class TestSearchCommand:
     def test_happy_path_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         profile = _write_profile(tmp_path)
-        monkeypatch.setattr(cli_module, "run_search", lambda *a, **kw: _fake_response())
+        monkeypatch.setattr(cli_module, "run_hybrid_search", lambda *a, **kw: _fake_response())
         result = runner.invoke(app, ["search", "--query", "hello", "--profile", str(profile), "--json"])
         assert result.exit_code == 0
         payload = json.loads(result.stdout)
@@ -96,7 +102,7 @@ class TestSearchCommand:
 
     def test_happy_path_table_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         profile = _write_profile(tmp_path)
-        monkeypatch.setattr(cli_module, "run_search", lambda *a, **kw: _fake_response())
+        monkeypatch.setattr(cli_module, "run_hybrid_search", lambda *a, **kw: _fake_response())
         result = runner.invoke(app, ["search", "--query", "hello", "--profile", str(profile)])
         assert result.exit_code == 0
         assert "chunk_1" in result.stdout
@@ -104,7 +110,7 @@ class TestSearchCommand:
     def test_writes_output_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         profile = _write_profile(tmp_path)
         out_path = tmp_path / "out.json"
-        monkeypatch.setattr(cli_module, "run_search", lambda *a, **kw: _fake_response())
+        monkeypatch.setattr(cli_module, "run_hybrid_search", lambda *a, **kw: _fake_response())
         result = runner.invoke(
             app, ["search", "--query", "hello", "--profile", str(profile), "--output", str(out_path)]
         )
@@ -125,7 +131,7 @@ class TestSearchCommand:
         def _raise(*a: object, **kw: object) -> RetrievalResponse:
             raise InvalidFilterError("bad field")
 
-        monkeypatch.setattr(cli_module, "run_search", _raise)
+        monkeypatch.setattr(cli_module, "run_hybrid_search", _raise)
         result = runner.invoke(app, ["search", "--query", "hello", "--profile", str(profile)])
         assert result.exit_code == 2
 
@@ -135,7 +141,7 @@ class TestSearchCommand:
         def _raise(*a: object, **kw: object) -> RetrievalResponse:
             raise RetrievalError("collection empty")
 
-        monkeypatch.setattr(cli_module, "run_search", _raise)
+        monkeypatch.setattr(cli_module, "run_hybrid_search", _raise)
         result = runner.invoke(app, ["search", "--query", "hello", "--profile", str(profile)])
         assert result.exit_code == 3
 
@@ -252,3 +258,128 @@ class TestEvaluateCommand:
         monkeypatch.setattr(cli_module, "run_evaluation_pipeline", _raise)
         result = runner.invoke(app, ["evaluate", "--profile", str(profile)])
         assert result.exit_code == 2
+
+
+class TestModeTogglePrecedence:
+    """Explicit flags > --mode > profile — see `_resolve_toggles`'s docstring."""
+
+    def test_profile_only(self) -> None:
+        bm25, rerank, _ = _resolve_toggles(
+            profile_bm25=False, profile_reranker=False, mode=None, bm25_flag=None, rerank_flag=None
+        )
+        assert (bm25, rerank) == (False, False)
+
+    def test_mode_overrides_profile(self) -> None:
+        bm25, rerank, _ = _resolve_toggles(
+            profile_bm25=False, profile_reranker=False, mode="hybrid-rerank", bm25_flag=None, rerank_flag=None
+        )
+        assert (bm25, rerank) == (True, True)
+
+    def test_explicit_flag_overrides_mode(self) -> None:
+        bm25, rerank, _ = _resolve_toggles(
+            profile_bm25=False,
+            profile_reranker=False,
+            mode="hybrid-rerank",
+            bm25_flag=False,
+            rerank_flag=None,
+        )
+        assert (bm25, rerank) == (False, True)
+
+    def test_explicit_flags_override_everything(self) -> None:
+        bm25, rerank, _ = _resolve_toggles(
+            profile_bm25=True, profile_reranker=True, mode="vector", bm25_flag=True, rerank_flag=True
+        )
+        assert (bm25, rerank) == (True, True)
+
+    def test_vector_rerank_mode(self) -> None:
+        bm25, rerank, _ = _resolve_toggles(
+            profile_bm25=False, profile_reranker=False, mode="vector-rerank", bm25_flag=None, rerank_flag=None
+        )
+        assert (bm25, rerank) == (False, True)
+
+
+class TestSearchModeFlags:
+    def test_invalid_mode_exits_2(self, tmp_path: Path) -> None:
+        profile = _write_profile(tmp_path)
+        result = runner.invoke(
+            app, ["search", "--query", "hello", "--profile", str(profile), "--mode", "bogus"]
+        )
+        assert result.exit_code == 2
+
+    def test_mode_hybrid_is_forwarded(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        profile = _write_profile(tmp_path)
+        captured: dict[str, object] = {}
+
+        def _fake(*a: object, **kw: object) -> RetrievalResponse:
+            captured.update(kw)
+            return _fake_response()
+
+        monkeypatch.setattr(cli_module, "run_hybrid_search", _fake)
+        result = runner.invoke(
+            app, ["search", "--query", "hello", "--profile", str(profile), "--mode", "hybrid"]
+        )
+        assert result.exit_code == 0
+        assert captured["bm25_enabled"] is True
+        assert captured["reranker_enabled"] is False
+
+    def test_no_bm25_flag_overrides_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        profile = _write_profile(tmp_path)
+        captured: dict[str, object] = {}
+
+        def _fake(*a: object, **kw: object) -> RetrievalResponse:
+            captured.update(kw)
+            return _fake_response()
+
+        monkeypatch.setattr(cli_module, "run_hybrid_search", _fake)
+        result = runner.invoke(
+            app,
+            ["search", "--query", "hello", "--profile", str(profile), "--mode", "hybrid", "--no-bm25"],
+        )
+        assert result.exit_code == 0
+        assert captured["bm25_enabled"] is False
+
+    def test_corpus_compatibility_error_exits_5(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        profile = _write_profile(tmp_path)
+
+        def _raise(*a: object, **kw: object) -> RetrievalResponse:
+            raise CorpusCompatibilityError("mismatch")
+
+        monkeypatch.setattr(cli_module, "run_hybrid_search", _raise)
+        result = runner.invoke(
+            app, ["search", "--query", "hello", "--profile", str(profile), "--mode", "hybrid"]
+        )
+        assert result.exit_code == 5
+
+
+class TestBuildBm25Command:
+    def _manifest(self) -> BM25Manifest:
+        from datetime import datetime, timezone
+
+        return BM25Manifest(
+            generated_at_utc=datetime.now(timezone.utc),
+            collection_name="col",
+            chroma_persistence_path="path",
+            corpus_count=3,
+            corpus_fingerprint="abc123",
+            chunk_ids=["c1", "c2", "c3"],
+            bm25_library="bm25s",
+            bm25_library_version="0.3.11",
+            tokenizer_version="1.0.0",
+            method="lucene",
+            k1=1.2,
+            b=0.75,
+        )
+
+    def test_happy_path_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        profile = _write_profile(tmp_path)
+        manifest = self._manifest()
+        monkeypatch.setattr(cli_module, "build_bm25_index_pipeline", lambda *a, **kw: manifest)
+        result = runner.invoke(app, ["build-bm25", "--profile", str(profile), "--json"])
+        assert result.exit_code == 0
+        assert json.loads(result.stdout)["corpus_count"] == 3
+
+    def test_help(self) -> None:
+        result = runner.invoke(app, ["build-bm25", "--help"])
+        assert result.exit_code == 0
