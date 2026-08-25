@@ -54,6 +54,13 @@ vlm = ["transformers>=4.45", "accelerate>=1.0"]
 # -- see docs/chunker/CONFIGURATION.md) and the standalone recursive text
 # splitter (langchain-text-splitters, not the full langchain framework).
 chunking = ["transformers>=4.45", "langchain-text-splitters>=0.3"]
+# Embedding/indexing service: BGE embeddings via sentence-transformers, stored
+# in a persistent local ChromaDB collection. Versions pinned to the floor
+# actually installed and verified during development (sentence-transformers
+# 6.0.0, chromadb 1.5.9) so a fresh install cannot silently drift onto an
+# incompatible major that changed the PersistentClient/Collection API this
+# adapter relies on.
+indexing = ["sentence-transformers>=6.0,<7", "chromadb>=1.5,<2"]
 # Development tooling. Duplicated (deliberately) into [dependency-groups] below:
 # `pip install -e ".[dev]"` works on every supported pip version, while
 # `pip install -e . --group dev` (PEP 735, pip >= 25.1) is the modern equivalent.
@@ -90,6 +97,7 @@ dev = [
 [project.scripts]
 engrag-parse = "engineering_rag.api.cli:app"
 engrag-chunk = "engineering_rag.api.chunker_cli:app"
+engrag-index = "engineering_rag.api.index_cli:app"
 
 [project.urls]
 Documentation = "https://github.com/example/engineering-rag-parser#readme"

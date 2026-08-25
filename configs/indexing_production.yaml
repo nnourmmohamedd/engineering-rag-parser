@@ -1,0 +1,43 @@
+# Production indexing profile — embeds BGE-aligned chunker output
+# (see configs/chunker_bge.yaml) into a persistent ChromaDB collection.
+# See docs/indexing/ for the full compatibility rule and gate list.
+
+profile: production
+
+embedding:
+  model_name: BAAI/bge-base-en-v1.5
+  model_revision: null
+  trust_remote_code: false
+  expected_dimension: 768
+  maximum_sequence_length: 512
+  normalize_embeddings: true
+  batch_size: 32
+  device: auto
+  document_field: retrieval_text
+  document_prefix: ""
+  query_prefix: "Represent this sentence for searching relevant passages: "
+  offline: false
+  log_level: INFO
+
+chroma:
+  persistence_path: data/output/databases/chroma
+  collection_name: engineering_documents_v1
+  distance_metric: cosine
+  ingestion_batch_size: 100
+  idempotent: true
+  allow_rebuild: false
+  telemetry: false
+
+validation:
+  norm_tolerance: 0.001
+  require_all_chunks: true
+  require_round_trip_match: true
+  require_model_tokenizer_match: true
+  self_retrieval_sample_size: 20
+  fail_on_model_mismatch: true
+
+logging:
+  log_level: INFO
+
+output_root: data/output/indexing
+strict: false
