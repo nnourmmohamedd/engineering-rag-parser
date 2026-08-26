@@ -67,6 +67,15 @@ indexing = ["sentence-transformers>=6.0,<7", "chromadb>=1.5,<2"]
 # reranking (BAAI/bge-reranker-base) reuses sentence-transformers already
 # declared under `indexing` -- no separate reranker dependency is needed.
 hybrid = ["bm25s>=0.3,<0.4"]
+# Grounded answering: a local Ollama HTTP client (httpx -- already an
+# installed transitive dependency via chromadb under `indexing`; declared
+# explicitly here so the dependency surface is correct even if that
+# transitive link ever changes) plus the Qwen/Qwen3-8B tokenizer for
+# deterministic token budgeting (transformers, already declared under
+# `chunking`; tokenizer files only are ever downloaded, never model weights).
+# No LLM inference library is added -- generation happens entirely inside the
+# separately-installed, locally-running Ollama server over its HTTP API.
+answering = ["httpx>=0.27", "transformers>=4.45"]
 # Development tooling. Duplicated (deliberately) into [dependency-groups] below:
 # `pip install -e ".[dev]"` works on every supported pip version, while
 # `pip install -e . --group dev` (PEP 735, pip >= 25.1) is the modern equivalent.
@@ -105,6 +114,7 @@ engrag-parse = "engineering_rag.api.cli:app"
 engrag-chunk = "engineering_rag.api.chunker_cli:app"
 engrag-index = "engineering_rag.api.index_cli:app"
 engrag-retrieve = "engineering_rag.api.retrieve_cli:app"
+engrag-ask = "engineering_rag.api.ask_cli:app"
 
 [project.urls]
 Documentation = "https://github.com/example/engineering-rag-parser#readme"

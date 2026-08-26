@@ -18,61 +18,93 @@ touching code that has nothing to do with either.
 
 So every major capability is an **isolated service** under `services/`, with
 its own public interface, its own tests, and its own internal module
-structure. `services/parser/` and `services/chunker/` are both implemented.
-`clients/`, `databases/`, `prompts/` are empty boundaries reserved for
-milestones that have not started.
+structure. Every service listed below is now implemented; nothing under
+`services/`, `clients/`, `databases/`, or `prompts/` remains an empty
+boundary as of the grounded-answering milestone.
 
 ## Every top-level package
 
 ```text
 src/engineering_rag/
-├── api/           user/system entry points — the engrag-parse and engrag-chunk CLIs
-├── clients/       future boundary: embedding/reranker/LLM/remote-model clients (empty)
-├── databases/     future boundary: ChromaDB, metadata store, repositories (empty)
-├── pipelines/     orchestration only — coordinates one or more services
-├── prompts/       future boundary: retrieval/generation prompt templates (empty)
+├── api/             CLIs: engrag-parse, engrag-chunk, engrag-index, engrag-retrieve, engrag-ask
+├── clients/
+│   └── ollama/       local Ollama HTTP client (health/version/tags/chat) — transport only
+├── databases/
+│   ├── chroma/        ChromaDB adapter — the only module importing chromadb
+│   └── bm25/           persistent BM25 lexical index (bm25s)
+├── pipelines/        orchestration only — coordinates one or more services
+├── prompts/
+│   └── answering/      versioned system prompt + structured-output JSON Schema
 ├── services/
-│   ├── parser/    COMPLETE — PDF parsing, validation, artifact generation
-│   └── chunker/   COMPLETE — hierarchical + conditional-recursive chunking, validation
-└── utils/         generic, service-agnostic helpers (paths, hashing, logging)
+│   ├── parser/         PDF parsing, validation, artifact generation
+│   ├── chunker/        hierarchical + conditional-recursive chunking, validation
+│   ├── embedder/        BGE embedding service
+│   ├── retriever/        vector + BM25 + RRF fusion retrieval
+│   ├── reranker/          cross-encoder reranking
+│   ├── context_builder/    dedup/budget/neighbor-expansion/citation-ID context selection
+│   ├── answerer/            prompt -> LLM client -> parse -> grounding-validate -> refuse/answer
+│   └── grounding/            deterministic citation + supporting-quote validation
+└── utils/            generic, service-agnostic helpers (paths, hashing, logging)
 ```
 
-| Package | Owns | Status |
-|---|---|---|
-| `api` | CLIs (`cli.py` for `engrag-parse`, `chunker_cli.py` for `engrag-chunk`); a future HTTP interface would live here too | Implemented |
-| `pipelines` | Orchestration functions that call one or more services in sequence | Implemented (`parsing_pipeline.py`, `chunking_pipeline.py`) |
-| `services/parser` | Everything PDF-parsing-domain: config, preflight, Docling conversion, export, validation, artifacts | Implemented, complete |
-| `services/chunker` | Hierarchical-first, tokenizer-aware, conditionally-recursive chunking of `document.json`; see `docs/chunker/` | Implemented, complete |
-| `clients` | Adapters to external model/service endpoints | Empty boundary |
-| `databases` | Adapters to vector stores / metadata stores | Empty boundary |
-| `prompts` | LLM prompt templates for retrieval/generation | Empty boundary |
-| `utils` | `paths.py` (safe filenames, default data roots), `hashing.py` (streamed SHA-256), `logging.py` (centralized stdlib logging) | Implemented |
+| Package | Owns |
+|---|---|
+| `api` | CLIs — `cli.py` (`engrag-parse`), `chunker_cli.py` (`engrag-chunk`), `index_cli.py` (`engrag-index`), `retrieve_cli.py` (`engrag-retrieve`), `ask_cli.py` (`engrag-ask`) |
+| `pipelines` | Orchestration functions that call one or more services in sequence — `parsing_pipeline.py`, `chunking_pipeline.py`, `indexing_pipeline.py`, `retrieval_pipeline.py`, `answering_pipeline.py`, `answering_evaluation.py` |
+| `services/parser` | Everything PDF-parsing-domain: config, preflight, Docling conversion, export, validation, artifacts |
+| `services/chunker` | Hierarchical-first, tokenizer-aware, conditionally-recursive chunking of `document.json`; see `docs/chunker/` |
+| `services/embedder` | BGE (`sentence-transformers`) embedding service, injected wherever a query/passage vector is needed |
+| `services/retriever` | Vector search, BM25 search, Reciprocal Rank Fusion, corpus-compatibility checks; see `docs/retrieval/` |
+| `services/reranker` | Cross-encoder (`BAAI/bge-reranker-base`) joint query-document scoring of a small candidate set |
+| `services/context_builder` | Ranked retrieval hits -> deduplicated, token-budgeted, citable `ContextPackage`; never imports `chromadb` |
+| `services/answerer` | Builds the prompt, calls the abstract `LLMClient`, parses/validates the structured draft, resolves refusal/answer/repair; never imports `chromadb` |
+| `services/grounding` | Deterministic citation-allow-listing and supporting-quote-presence checks; depends only on `context_builder`'s types |
+| `clients/ollama` | Local Ollama HTTP client — health/version/model-list/structured-chat; the only module importing Ollama's wire protocol |
+| `databases/chroma` | ChromaDB adapter — the only module importing `chromadb` |
+| `databases/bm25` | Persistent BM25 lexical index (`bm25s`) — the only module importing it |
+| `prompts/answering` | Versioned system prompt + JSON Schema + sanitized evidence-block formatting; no network calls |
+| `utils` | `paths.py` (safe filenames, default data roots), `hashing.py` (streamed SHA-256), `logging.py` (centralized stdlib logging) |
 
 ## Allowed dependency direction
 
 ```mermaid
 flowchart TD
-    api["api\n(engrag-parse, engrag-chunk)"] --> pipelines["pipelines\n(parsing_pipeline, chunking_pipeline)"]
-    pipelines --> parser["services/parser\n(ParserService)"]
-    pipelines --> chunker["services/chunker\n(ChunkerService)"]
-    parser --> utils["utils\n(paths, hashing, logging)"]
+    api["api\n(engrag-parse/chunk/index/retrieve/ask)"] --> pipelines["pipelines\n(one *_pipeline.py per milestone)"]
+    pipelines --> parser["services/parser"]
+    pipelines --> chunker["services/chunker"]
+    pipelines --> retriever["services/retriever"]
+    pipelines --> reranker["services/reranker"]
+    pipelines --> ctxbuilder["services/context_builder"]
+    pipelines --> answerer["services/answerer"]
+    answerer --> grounding["services/grounding"]
+    pipelines --> databases["databases/chroma, databases/bm25"]
+    pipelines --> clients["clients/ollama"]
+    parser --> utils["utils"]
     chunker --> utils
-    parser -.future.-> clients["clients\n(empty)"]
-    parser -.future.-> databases["databases\n(empty)"]
+    retriever --> utils
 
     classDef impl fill:#2b8a3e,stroke:#1b5e24,color:#fff
-    classDef scaffold fill:#495057,stroke:#343a40,color:#fff,stroke-dasharray: 4 3
-    class api,pipelines,parser,chunker,utils impl
-    class clients,databases scaffold
+    class api,pipelines,parser,chunker,retriever,reranker,ctxbuilder,answerer,grounding,databases,clients,utils impl
 ```
 
 Rule: **`api -> pipelines -> services -> utils`**, plus `services -> clients`
-and `services -> databases` once those are implemented. Never the reverse of
-any arrow, and never `services/parser <-> services/chunker` — sibling
-services do not import each other; they communicate only through files on
-disk (`data/output/parser/.../docling/document.json` is the chunker's actual
-input, read via `services/chunker/loader.py`, never a direct Python import
-of `services.parser`).
+and `services -> databases`. Never the reverse of any arrow, and never one
+service importing another sibling service directly:
+
+- `services/parser` and `services/chunker` communicate only through files on
+  disk (`data/output/parser/.../docling/document.json` is the chunker's
+  actual input, read via `services/chunker/loader.py`, never a direct Python
+  import of `services.parser`).
+- `services/context_builder` never imports `chromadb` — a concrete
+  `NeighborProvider` is implemented and injected by
+  `pipelines/answering_pipeline.py`, the sole module that opens both the
+  Chroma collection and the context builder.
+- `services/answerer` never imports `chromadb` and never imports
+  `clients.ollama.http_client.OllamaHTTPClient` concretely — it depends on
+  the `LLMClient` interface only, injected by the pipeline.
+- `services/grounding` depends only on `services/context_builder`'s
+  `ContextPackage` type, never on `services/answerer`, so the dependency is
+  one-directional (`answerer -> grounding`, never the reverse).
 
 This is enforced by
 `tests/unit/test_architecture.py::TestServiceArchitectureBoundaries`, which
@@ -205,13 +237,23 @@ heading paths, and page/bbox provenance, under
 `HYBRID_BASELINE_COMPARISON.md`). Per this milestone's explicit scope: no
 embeddings, no vector database, no retrieval, no reranking, no chatbot.
 
-## Future client/database/prompt boundaries
+## Retrieval, reranking, and grounded-answering boundaries
 
-`clients/`, `databases/` and `prompts/` are empty boundary packages with only
-a `README.md` each, describing what will eventually live there (external
-model clients; vector-store/metadata adapters; LLM prompt templates
-respectively). Nothing is implemented, and no placeholder/fake code was added
-ahead of the milestones that need them.
+`docs/retrieval/` covers `services/retriever`, `services/reranker`,
+`databases/chroma`, and `databases/bm25` in full. `docs/answering/` covers
+`services/context_builder`, `services/answerer`, `services/grounding`,
+`clients/ollama`, and `prompts/answering`. In short: retrieval never
+duplicates itself for answering — `pipelines/answering_pipeline.py` calls
+the existing `pipelines/retrieval_pipeline.py::run_hybrid_search` for every
+one of the four retrieval modes, then layers context building, prompting,
+local generation, and grounding validation on top.
+
+Answering artifacts land under `data/output/answering/<RUN_ID>/`
+(git-ignored): `query.json`, `retrieval_response.json`, `context.json`,
+`prompt_manifest.json`, `answer_draft.json`, `answer.json`,
+`grounding_report.json`, `manifest.json`, `logs/` — written atomically by
+`pipelines/answering_artifacts.py::AnsweringRunDirectory`, mirroring
+`retrieval_artifacts.py`'s pattern exactly.
 
 ## How to add a new service
 

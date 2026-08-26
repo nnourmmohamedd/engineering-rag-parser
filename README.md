@@ -76,14 +76,37 @@ real-world scans.
 
 **Does not**
 
-- No chunking, embeddings, vector database, reranker or chatbot. This is the upstream stage; its
-  outputs are designed for those to consume without reparsing the PDF
-  (see [the ingestion contract](docs/productionization_options.md#future-ingestion-contract)).
+- No conversation memory, chatbot UI, or deployment/authentication surface. The answering backend
+  (below) is a single-turn, question-in/answer-out API, not an agent.
 - No cloud calls, no uploads, no telemetry. `enable_remote_services` is pinned to `False` by a
-  validator that refuses to be overridden.
+  validator that refuses to be overridden. LLM generation runs entirely through a **local** Ollama
+  server — no cloud inference, no Ollama account, no paid API.
 - No AI-generated descriptions of engineering diagrams by default. See
   [ADR-005](TASKS.md#adr-005--no-vlm-picture-description-in-the-default-path).
 - No modification of the input file, ever (asserted by a gate).
+
+## Beyond parsing: chunking, retrieval, and grounded answering
+
+This repository has grown past the parser-only milestone described in most of this README. The
+full pipeline today is:
+
+```text
+parse (this README)  ->  chunk  ->  embed + index (Chroma)  ->  retrieve (vector/BM25/hybrid/rerank)  ->  answer (local Ollama, grounded, cited)
+```
+
+| Stage | CLI | Docs |
+|---|---|---|
+| Structure-aware chunking | `engrag-chunk` | [`docs/chunker/`](docs/chunker/) |
+| Embedding + ChromaDB indexing | `engrag-index` | [`docs/indexing/`](docs/indexing/) |
+| Vector / hybrid (BM25 + RRF) / cross-encoder-reranked retrieval | `engrag-retrieve` | [`docs/retrieval/`](docs/retrieval/) |
+| Grounded LLM answer generation (local `qwen3:4b` via Ollama, cited, refuses when evidence is insufficient) | `engrag-ask` | [`docs/answering/`](docs/answering/) |
+
+The answering backend never reparses the PDF or duplicates retrieval logic — it calls the existing
+`engrag-retrieve` pipeline, builds a token-budgeted, citable context, and validates every citation
+deterministically before returning an answer. See
+[`docs/answering/GROUNDED_ANSWERING_ARCHITECTURE.md`](docs/answering/GROUNDED_ANSWERING_ARCHITECTURE.md)
+for the full flow and [`docs/answering/SECURITY_AND_GROUNDING.md`](docs/answering/SECURITY_AND_GROUNDING.md)
+for the threat model (retrieved document text is treated as untrusted data, never as instructions).
 
 ---
 
@@ -171,6 +194,13 @@ python -m pip install -e ".[dev]"
 pip install -e ".[ocr]"   # RapidOCR (default engine) — only for genuinely scanned documents
 pip install -e ".[ocr-easyocr]"  # EasyOCR alternative (set docling.ocr_engine: easyocr)
 pip install -e ".[vlm]"   # local VLM picture description (off by default, see ADR-005)
+pip install -e ".[chunking]"  # structure-aware chunking (engrag-chunk)
+pip install -e ".[indexing]"  # BGE embeddings + ChromaDB (engrag-index, engrag-retrieve)
+pip install -e ".[hybrid]"    # BM25 lexical index + RRF fusion (engrag-retrieve --mode hybrid*)
+pip install -e ".[answering]" # local Ollama client + Qwen3 tokenizer for token budgeting (engrag-ask)
+
+# Everything at once, matching CI:
+pip install -e ".[dev,chunking,indexing,hybrid,answering]"
 ```
 
 ### Reproducible installation (lockfile)
@@ -403,6 +433,11 @@ UTF-8 with LF regardless.
 
 | Document | Contents |
 |---|---|
+| [`docs/answering/ANSWERING_COMPLETION_REPORT.md`](docs/answering/ANSWERING_COMPLETION_REPORT.md) | Evidence for the grounded-answering milestone: Ollama/model digest, tests, quality gates, real acceptance queries |
+| [`docs/answering/GROUNDED_ANSWERING_ARCHITECTURE.md`](docs/answering/GROUNDED_ANSWERING_ARCHITECTURE.md) · [`COMMANDS.md`](docs/answering/COMMANDS.md) · [`EVALUATION.md`](docs/answering/EVALUATION.md) · [`OLLAMA_SETUP.md`](docs/answering/OLLAMA_SETUP.md) · [`SECURITY_AND_GROUNDING.md`](docs/answering/SECURITY_AND_GROUNDING.md) | Context building, token budgeting, prompts, citation validation, Ollama setup, threat model |
+| [`docs/retrieval/HYBRID_RETRIEVAL_COMPLETION_REPORT.md`](docs/retrieval/HYBRID_RETRIEVAL_COMPLETION_REPORT.md) · [`RETRIEVAL_COMPLETION_REPORT.md`](docs/retrieval/RETRIEVAL_COMPLETION_REPORT.md) | Evidence for the vector + hybrid retrieval/reranking milestones |
+| [`docs/retrieval/ARCHITECTURE.md`](docs/retrieval/ARCHITECTURE.md) · [`HYBRID_RETRIEVAL_ARCHITECTURE.md`](docs/retrieval/HYBRID_RETRIEVAL_ARCHITECTURE.md) · [`COMMANDS.md`](docs/retrieval/COMMANDS.md) · [`EVALUATION.md`](docs/retrieval/EVALUATION.md) | Retrieval pipeline, BM25/RRF/reranker design, commands, evaluation |
+| [`docs/indexing/`](docs/indexing/) | Embedding + ChromaDB indexing pipeline documentation |
 | [`docs/chunker/CHUNKER_COMPLETION_REPORT.md`](docs/chunker/CHUNKER_COMPLETION_REPORT.md) | Evidence for the chunking milestone: tests, quality gates, real-document acceptance runs, HybridChunker comparison |
 | [`docs/chunker/ARCHITECTURE.md`](docs/chunker/ARCHITECTURE.md) · [`OUTPUT_SCHEMA.md`](docs/chunker/OUTPUT_SCHEMA.md) · [`CONFIGURATION.md`](docs/chunker/CONFIGURATION.md) · [`VALIDATION.md`](docs/chunker/VALIDATION.md) · [`MENTOR_EXPLANATION.md`](docs/chunker/MENTOR_EXPLANATION.md) | Chunker pipeline, output contract, config reference, validation gates, design rationale |
 | [`RESTRUCTURE_COMPLETION_REPORT.md`](RESTRUCTURE_COMPLETION_REPORT.md) | Evidence for the service-architecture restructure: mapping, tests, quality gates, acceptance runs |
