@@ -76,6 +76,18 @@ hybrid = ["bm25s>=0.3,<0.4"]
 # No LLM inference library is added -- generation happens entirely inside the
 # separately-installed, locally-running Ollama server over its HTTP API.
 answering = ["httpx>=0.27", "transformers>=4.45"]
+# Local document-ingestion chatbot backend: a FastAPI application serving the
+# React frontend in apps/rag-chatbot. `python-multipart` is required by
+# Starlette to parse multipart/form-data uploads. Durable application state
+# (documents, ingestion jobs, conversations) uses the standard library's
+# `sqlite3` -- no ORM is declared, because a single-user local registry with
+# an explicit schema-version mechanism does not justify the extra dependency
+# surface an ORM would add (see docs/chatbot/ARCHITECTURE.md).
+chatbot = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.32,<1",
+  "python-multipart>=0.0.18",
+]
 # Development tooling. Duplicated (deliberately) into [dependency-groups] below:
 # `pip install -e ".[dev]"` works on every supported pip version, while
 # `pip install -e . --group dev` (PEP 735, pip >= 25.1) is the modern equivalent.

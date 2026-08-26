@@ -162,6 +162,45 @@ class TestServiceArchitectureBoundaries:
         ]
         assert not offenders, f"a pipeline must not depend on api: {offenders}"
 
+    def test_lower_tiers_do_not_import_the_chatbot(self) -> None:
+        """`chatbot` is an api-tier consumer: nothing beneath it may depend on it."""
+        offenders = [
+            f"{p}: {name}"
+            for tier in ("utils", "services", "pipelines", "databases", "clients", "prompts")
+            for p in _module_paths(SRC / tier)
+            for name in _imports(p)
+            if name.startswith("engineering_rag.chatbot")
+        ]
+        assert not offenders, f"{offenders} depend upward on engineering_rag.chatbot"
+
+    def test_chatbot_reuses_pipelines_rather_than_service_internals(self) -> None:
+        """The chatbot must orchestrate existing pipelines, never re-implement a stage.
+
+        Importing a *service* directly from the chatbot is how duplicate
+        parsing/chunking/indexing logic starts: the pipeline entry points are
+        the supported contract. Typed contracts (config/model/exception
+        modules) are fine -- executing a stage yourself is not.
+        """
+        allowed_service_modules = {
+            # Typed contracts and errors only; none of these execute a stage.
+            "engineering_rag.services.parser.config",
+            "engineering_rag.services.parser.models",
+            "engineering_rag.services.parser.errors",
+            "engineering_rag.services.chunker.config",
+            "engineering_rag.services.retriever",
+            "engineering_rag.services.retriever.errors",
+            "engineering_rag.services.reranker",
+        }
+        offenders = [
+            f"{p}: {name}"
+            for p in _module_paths(SRC / "chatbot")
+            for name in _imports(p)
+            if name.startswith("engineering_rag.services.") and name not in allowed_service_modules
+        ]
+        assert not offenders, (
+            f"the chatbot must call pipelines, not reach into service internals: {offenders}"
+        )
+
     def test_no_circular_imports_across_top_level_packages(self) -> None:
         """A cycle would make at least one of these fail to import."""
         result = subprocess.run(
