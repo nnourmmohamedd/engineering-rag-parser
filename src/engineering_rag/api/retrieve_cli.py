@@ -30,6 +30,7 @@ from engineering_rag.services.reranker import RerankerError
 from engineering_rag.services.retriever import (
     RETRIEVER_VERSION,
     CorpusCompatibilityError,
+    FilterValue,
     InvalidFilterError,
     RetrievalError,
 )
@@ -94,8 +95,8 @@ def _load(profile: Path | None, log_level: str) -> RetrievalConfig:
     return config
 
 
-def _parse_filters(raw: list[str]) -> dict[str, str | int | float | bool]:
-    filters: dict[str, str | int | float | bool] = {}
+def _parse_filters(raw: list[str]) -> dict[str, FilterValue]:
+    filters: dict[str, FilterValue] = {}
     for item in raw:
         if "=" not in item:
             raise typer.BadParameter(f"--filter must be KEY=VALUE, got: {item!r}")

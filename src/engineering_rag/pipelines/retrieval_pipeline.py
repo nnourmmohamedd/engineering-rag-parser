@@ -34,6 +34,7 @@ from engineering_rag.services.reranker.cross_encoder import CrossEncoderReranker
 from engineering_rag.services.reranker.interface import Reranker
 from engineering_rag.services.retriever import (
     CollectionNotFoundError,
+    FilterValue,
     RetrievalEvaluationSummary,
     RetrievalRequest,
     RetrievalResponse,
@@ -113,7 +114,7 @@ def run_search(
     config: RetrievalConfig,
     *,
     top_k: int | None = None,
-    metadata_filters: dict[str, str | int | float | bool] | None = None,
+    metadata_filters: dict[str, FilterValue] | None = None,
     collection_name: str | None = None,
     embedder: EmbeddingService | None = None,
 ) -> RetrievalResponse:
@@ -397,7 +398,7 @@ def run_hybrid_search(
     top_k: int | None = None,
     bm25_enabled: bool | None = None,
     reranker_enabled: bool | None = None,
-    metadata_filters: dict[str, str | int | float | bool] | None = None,
+    metadata_filters: dict[str, FilterValue] | None = None,
     collection_name: str | None = None,
     embedder: EmbeddingService | None = None,
     reranker: Reranker | None = None,
