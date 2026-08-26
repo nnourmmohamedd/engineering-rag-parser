@@ -22,7 +22,7 @@ from typing import Any
 from .errors import DuplicateIdConflictError
 from .models import IngestionOutcome
 
-__all__ = ["content_hash", "ingest_batch"]
+__all__ = ["content_hash", "delete_document_records", "ingest_batch", "list_document_chunk_ids"]
 
 logger = logging.getLogger(__name__)
 
@@ -90,3 +90,35 @@ def ingest_batch(
 
     outcome.final_count = collection.count()
     return outcome
+
+
+def list_document_chunk_ids(collection: Any, document_id: str) -> list[str]:
+    """Every chunk id currently stored for ``document_id``, sorted.
+
+    Used for cross-index reconciliation: the caller compares this against the
+    BM25 corpus so a document can never be active in one index and missing
+    from the other.
+    """
+    got = collection.get(where={"document_id": document_id}, include=[])
+    return sorted(got.get("ids") or [])
+
+
+def delete_document_records(collection: Any, document_id: str) -> list[str]:
+    """Remove every record belonging to ``document_id``; return the ids deleted.
+
+    This is the rollback primitive for a failed ingestion: if the vector write
+    succeeded but a later stage (BM25, reconciliation) failed, the partial
+    Chroma state must be undone so the collection never keeps chunks for a
+    document that is not actually active.
+
+    Scoped strictly by ``document_id`` -- it never clears a collection wholesale,
+    so one document's failure cannot destroy the existing validated corpus.
+    Deleting a document with no records is a no-op, which makes retrying a
+    rollback safe.
+    """
+    ids = list_document_chunk_ids(collection, document_id)
+    if not ids:
+        return []
+    collection.delete(ids=ids)
+    logger.info("Deleted %d Chroma record(s) for document_id=%s", len(ids), document_id)
+    return ids
