@@ -3,8 +3,11 @@
 This milestone adds the answering backend on top of the already-complete
 retrieval system: a user question goes through the existing
 `HybridRetriever`, then through a new context builder, a versioned secure
-prompt, a local Ollama model (`qwen3:8b`), and a deterministic grounding
-validator, before either a cited answer or an explicit refusal comes back.
+prompt, a local Ollama model (`qwen3:4b` in production; see
+`docs/answering/OLLAMA_SETUP.md` for the full model-selection history
+against `qwen3:8b` and the rejected `qwen3:1.7b`), and a deterministic
+grounding validator, before either a cited answer or an explicit refusal
+comes back.
 
 ```mermaid
 flowchart TD
@@ -16,7 +19,7 @@ flowchart TD
     CB --> T[Apply Token Budget]
     CB --> C[Assign Citation IDs]
     C --> P[Secure Prompt Builder]
-    P --> O[Local Ollama / qwen3:8b]
+    P --> O[Local Ollama / qwen3:4b]
     O --> S[Structured Answer Draft]
     S --> G[Citation + Grounding Validator]
     G -->|PASS| A1[Grounded Answer]
@@ -36,7 +39,7 @@ another chunk's content, or over-represent one document) — see
 
 ## Why token budgeting matters
 
-`qwen3:8b` is configured with an explicit `context_window_tokens: 8192` (via
+`qwen3:4b` is configured with an explicit `context_window_tokens: 4096` (via
 Ollama's `num_ctx`) — never left to Ollama's hardware-dependent default. That
 window has to be shared between the system prompt, the user's question, the
 citation-ID list, the evidence itself, and the reserved output tokens. Get
@@ -46,13 +49,23 @@ guessed:
 
 | Component | Tokens | Basis |
 |---|---|---|
-| System prompt (v1.0.0) | 672 | Measured with the Qwen3 tokenizer |
+| System prompt (v1.0.0) | 672 | Measured with the Qwen3 tokenizer (shared across all Qwen3 dense model sizes) |
 | Question + citation-ID wrapper + chat-template markers | ~50-80 | Measured for a 10-source case |
 | `context_builder.reserved_system_tokens` | 900 | Real headroom over the ~720-750 measured above |
-| `context_builder.max_context_tokens` | 5000 | Evidence budget |
+| `context_builder.max_context_tokens` | 2200 | Evidence budget |
 | `context_builder.safety_margin_tokens` | 400 | Absorbs `<SOURCE>` delimiter overhead and any counting error |
-| `ollama.max_output_tokens` | 1024 | Reserved generation budget |
-| **Total reserved** | **7324** | **868 tokens of headroom under `context_window_tokens` (8192)** |
+| `ollama.max_output_tokens` | 512 | Reserved generation budget -- raised from an initially-planned 384 after the real acceptance gate measured a reproducible JSON-truncation failure at that value (see `ANSWERING_COMPLETION_REPORT.md`) |
+| **Total reserved** | **4012** | **84 tokens of headroom under `context_window_tokens` (4096)** |
+
+A smaller `context_window_tokens` (this project ran `qwen3:8b` at 8192
+before switching production to `qwen3:4b` at 4096, matched to the smaller
+model's practical operating range on CPU-bound hardware) means less room for
+both evidence and output, which is part of why `generation_failed` /
+`malformed_model_output` (JSON truncated before completing) is a real,
+measured, non-zero failure mode with the smaller model — see
+`EVALUATION.md` for the measured rate per retrieval mode. The system always
+fails closed in that case rather than returning a truncated or fabricated
+answer.
 
 ## What neighbor expansion does
 
@@ -98,12 +111,15 @@ security boundary. Two structural defenses back it up:
 
 See `SECURITY_AND_GROUNDING.md` for the full threat model and tests.
 
-## What Qwen3 8B does, and why thinking is disabled
+## What Qwen3 4B does, and why thinking is disabled
 
-`qwen3:8b` is an Apache-2.0-licensed, locally-runnable model capable of
+`qwen3:4b` is an Apache-2.0-licensed, locally-runnable model capable of
 structured JSON output, selected for local CPU-feasible grounded
-question-answering (see the milestone brief for the full justification).
-Every generation call sets `think: false`: this project stores and reports
+question-answering after real testing against `qwen3:8b` (proven but too
+slow on this hardware) and `qwen3:1.7b` (too small to reliably follow the
+inline-citation instruction) — see `docs/answering/OLLAMA_SETUP.md` and
+`ANSWERING_COMPLETION_REPORT.md` for the full evidence. Every generation
+call sets `think: false`: this project stores and reports
 no hidden reasoning anywhere in its artifacts, logs, or CLI output — only
 the final structured JSON the model actually returns. `AnswerTrace`
 (`services/answerer/service.py`) captures the raw model content and the

@@ -1,11 +1,13 @@
 """Real-acceptance grounded-answering tests: the actual local Ollama server
-running the real ``qwen3:8b`` model, queried against the real, already-built
-``engineering_documents_v1`` Chroma collection (122 chunks).
+running the model pinned in ``configs/answering_production.yaml`` (currently
+``qwen3:4b`` -- see ``docs/answering/OLLAMA_SETUP.md`` for the model-selection
+history), queried against the real, already-built ``engineering_documents_v1``
+Chroma collection (122 chunks).
 
 Marked ``slow`` -- runs real model inference, excluded from
 ``pytest -m "not slow"`` CI. Self-skips if the real collection is not present
-or if a local Ollama server with ``qwen3:8b`` installed is not reachable (see
-``requires_ollama`` in ``tests/conftest.py``).
+or if a local Ollama server with the configured model installed is not
+reachable (see ``requires_ollama`` in ``tests/conftest.py``).
 """
 
 from __future__ import annotations
@@ -56,7 +58,7 @@ class TestRealGroundedAnswering:
             retrieval_mode="vector",
         )
         assert answer.status in ("answered", "insufficient_evidence")
-        assert answer.model_tag == "qwen3:8b"
+        assert answer.model_tag == answering_config.ollama.model
         assert answer.model_digest is not None
         # No hidden chain-of-thought is ever captured: the model runs with think=false, so the
         # raw content is exactly the structured JSON answer, never a separate reasoning field.

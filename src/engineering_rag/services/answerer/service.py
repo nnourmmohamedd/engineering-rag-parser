@@ -65,12 +65,19 @@ _MALFORMED_REPAIR_NOTE = (
 
 
 def _grounding_failure_repair_note(reasons: list[str]) -> str:
-    return (
+    note = (
         f"Your previous response failed validation: {', '.join(reasons) or 'unknown reason'}. Reissue a "
         "single valid JSON object using only the 'Available citation IDs' listed above -- never invent a "
         "citation ID or cite one not in that list -- and copy each supporting_quote exactly (word-for-word) "
         "from its cited source's text."
     )
+    if "missing_inline_citation" in reasons:
+        note += (
+            " Your 'answer' field must place the literal citation marker, e.g. [S2], directly inside the "
+            "sentence that states the claim it supports -- not only listed in 'citations_used'. Example: "
+            "'Control valves regulate flow [S2].' -- the marker belongs in the answer text itself."
+        )
+    return note
 
 
 class GroundedAnswerService:

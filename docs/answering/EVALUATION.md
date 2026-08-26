@@ -70,6 +70,36 @@ engrag-ask evaluate --profile configs\answering_production.yaml --retrieval-mode
 ```
 
 Real evaluation numbers (from an actual run against the real corpus and real
-Ollama) are recorded in `ANSWERING_COMPLETION_REPORT.md` once available —
-this document describes the metrics' definitions, not a specific run's
-results, since those depend on real generation having actually happened.
+Ollama) are recorded in `ANSWERING_COMPLETION_REPORT.md` — this document
+describes the metrics' definitions, not a specific run's results, since
+those depend on real generation having actually happened.
+
+## Real results (production model: `qwen3:4b`, 2026-08-26)
+
+All four modes run against the real 122-chunk `engineering_documents_v1`
+collection, real Ollama, on this project's development hardware (NVIDIA
+MX450, 2GB VRAM, CPU-bound generation; Intel i7-1165G7):
+
+| Metric | `vector` | `hybrid` | `vector-rerank` | `hybrid-rerank` |
+|---|---|---|---|---|
+| Structured-output validity | 1.000 | 0.900 | 0.850 | 0.850 |
+| Answer/refusal success | 0.900 | 0.900 | 0.950 | 0.950 |
+| Refusal precision / recall | 1.000 / 0.667 | 0.833 / 0.833 | 1.000 / 0.833 | 1.000 / 0.833 |
+| Citation validity rate | 1.000 | 1.000 | 1.000 | 1.000 |
+| Unknown-citation rate | 0.000 | 0.000 | 0.000 | 0.000 |
+| Supporting-quote validity | 0.974 | 1.000 | 1.000 | 1.000 |
+| Generation failure rate | 0.000 | 0.100 | 0.150 | 0.150 |
+| Grounding validation pass rate | 0.800 | 0.750 | 0.700 | 0.700 |
+| Latency p50 / p95 (s) | 130.5 / 244.2 | 155.3 / 273.7 | 208.4 / 304.2 | 189.6 / 319.6 |
+
+Citation validity is 1.000 in every mode across all four runs — zero
+unknown/fabricated citations, in any mode, in this real evaluation. The
+non-zero generation-failure rate (a real query's JSON output hitting the
+512-token cap before completing) is a measured trade-off of running a
+smaller, faster model on CPU-bound hardware, not a validation-gate weakening:
+the pipeline always fails closed (`generation_failed` status, grounding
+`FAIL`) in that case rather than returning a truncated or fabricated answer.
+
+Full per-run reports: `data/output/answering_evaluation/<RUN_ID>/answering_evaluation_report.json`
+and `..._summary.md` (see `ANSWERING_COMPLETION_REPORT.md` for the specific
+run IDs).

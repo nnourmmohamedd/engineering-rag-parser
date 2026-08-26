@@ -49,7 +49,7 @@ class TestLoadAnsweringConfig:
 
     def test_real_production_profile_loads(self) -> None:
         config = load_answering_config(Path("configs/answering_production.yaml"))
-        assert config.ollama.model == "qwen3:8b"
+        assert config.ollama.model == "qwen3:4b"
         assert config.ollama.think is False
         assert config.answering.prompt_version == "1.0.0"
 

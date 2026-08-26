@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from engineering_rag.databases.bm25.config import BM25Config
 from engineering_rag.databases.chroma import (
     CollectionIdentity,
     chroma_safe_metadata,
@@ -81,7 +82,11 @@ def _build_collection(tmp_path: Path) -> ChromaConfig:
 
 
 def _retrieval_config(tmp_path: Path, chroma_config: ChromaConfig) -> RetrievalConfig:
-    return RetrievalConfig(embedding={"model_name": _MODEL_NAME}, chroma=chroma_config)
+    return RetrievalConfig(
+        embedding={"model_name": _MODEL_NAME},
+        chroma=chroma_config,
+        bm25=BM25Config(index_path=str(tmp_path / "bm25")),
+    )
 
 
 def _answering_config() -> AnsweringPipelineConfig:

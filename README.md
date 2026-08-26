@@ -99,7 +99,7 @@ parse (this README)  ->  chunk  ->  embed + index (Chroma)  ->  retrieve (vector
 | Structure-aware chunking | `engrag-chunk` | [`docs/chunker/`](docs/chunker/) |
 | Embedding + ChromaDB indexing | `engrag-index` | [`docs/indexing/`](docs/indexing/) |
 | Vector / hybrid (BM25 + RRF) / cross-encoder-reranked retrieval | `engrag-retrieve` | [`docs/retrieval/`](docs/retrieval/) |
-| Grounded LLM answer generation (local `qwen3:8b` via Ollama, cited, refuses when evidence is insufficient) | `engrag-ask` | [`docs/answering/`](docs/answering/) |
+| Grounded LLM answer generation (local `qwen3:4b` via Ollama, cited, refuses when evidence is insufficient) | `engrag-ask` | [`docs/answering/`](docs/answering/) |
 
 The answering backend never reparses the PDF or duplicates retrieval logic — it calls the existing
 `engrag-retrieve` pipeline, builds a token-budgeted, citable context, and validates every citation
