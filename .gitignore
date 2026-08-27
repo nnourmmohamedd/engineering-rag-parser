@@ -77,3 +77,7 @@ apps/*/*.tsbuildinfo
 
 # --- Chatbot backend local application state (registry DB, uploads, artifacts) ---
 data/chatbot/
+apps/*/e2e/.tmp-data/
+
+# Synthetic E2E fixture PDF is intentionally committed (not real/confidential data).
+!apps/rag-chatbot/e2e/fixtures/sample.pdf

@@ -90,7 +90,13 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    /* Global safeguard: the page body must never scroll horizontally.
+       Wide content (tables, code blocks) scrolls inside its own
+       overflow-x-auto container instead. This also absorbs off-screen
+       elements some libraries position outside the viewport by design
+       (e.g. an aria-live toast region's hidden announcer span), which
+       are invisible but would otherwise still register as page overflow. */
+    @apply overflow-x-hidden bg-background text-foreground antialiased;
     font-feature-settings:
       'rlig' 1,
       'calt' 1;

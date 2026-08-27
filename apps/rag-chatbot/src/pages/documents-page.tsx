@@ -139,7 +139,7 @@ export function DocumentsPage() {
           )}
 
           {!isLoading && !isError && filtered.length > 0 && (
-            <div className="-mx-4 overflow-x-auto sm:mx-0">
+            <div className="w-full min-w-0 overflow-x-auto">
               <table className="w-full min-w-[640px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">

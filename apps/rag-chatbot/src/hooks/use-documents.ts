@@ -13,14 +13,15 @@ export function useDocuments() {
   return useQuery({
     queryKey: documentKeys.all,
     queryFn: api.listDocuments,
-    // Documents transition through processing stages; poll gently so the
-    // list reflects reality without a live subscription per row.
+    // Documents transition through processing stages; poll while something
+    // is active so the list reflects reality without a live subscription
+    // per row (the document detail page uses SSE for finer-grained progress).
     refetchInterval: (query) => {
       const documents = query.state.data;
       const hasActive = documents?.some(
         (d) => d.status === 'PROCESSING' || d.status === 'UPLOADED',
       );
-      return hasActive ? 3_000 : false;
+      return hasActive ? 1_500 : false;
     },
   });
 }

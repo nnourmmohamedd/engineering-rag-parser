@@ -63,14 +63,12 @@ describe('DocumentRow deletion', () => {
   });
 
   it('only calls the delete API after the confirm button is clicked', async () => {
-    const deleteSpy = vi
-      .spyOn(api, 'deleteDocument')
-      .mockResolvedValue({
-        document_id: 'd1',
-        deleted: true,
-        chunks_removed: 5,
-        display_name: 'x',
-      });
+    const deleteSpy = vi.spyOn(api, 'deleteDocument').mockResolvedValue({
+      document_id: 'd1',
+      deleted: true,
+      chunks_removed: 5,
+      display_name: 'x',
+    });
     const user = userEvent.setup();
     renderRow(doc());
 

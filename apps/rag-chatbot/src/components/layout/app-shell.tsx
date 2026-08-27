@@ -92,7 +92,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="hidden items-center justify-end border-b bg-card px-4 py-2 md:flex">
           <ThemeToggle />
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+        {/* overflow-x-hidden is a structural guarantee: no page's content --
+            however it computes its own width -- can force the document
+            itself to scroll horizontally. Anything genuinely wide (a data
+            table, a code block) must scroll inside its own overflow-x-auto
+            container instead. */}
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

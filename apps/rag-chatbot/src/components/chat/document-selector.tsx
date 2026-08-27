@@ -1,4 +1,5 @@
 import { FileText } from 'lucide-react';
+import { useId } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -14,8 +15,16 @@ interface DocumentSelectorProps {
  * Only READY documents are selectable -- a processing or failed document
  * cannot answer a question, so it is shown but disabled rather than hidden,
  * so the user understands why it's unavailable.
+ *
+ * The chat page mounts this component twice simultaneously (a desktop
+ * `aside` hidden below `lg`, and a mobile drawer hidden above it), so
+ * checkbox ids are namespaced with a per-instance id -- otherwise two
+ * elements would share the same DOM id, which breaks label association
+ * (a browser resolves a duplicate id's `<label for>` unpredictably) and is
+ * invalid HTML regardless.
  */
 export function DocumentSelector({ selected, onChange }: DocumentSelectorProps) {
+  const instanceId = useId();
   const { data: documents, isLoading } = useDocuments();
   const readyDocuments = (documents ?? []).filter((d) => d.status === 'READY');
   const unavailableCount = (documents?.length ?? 0) - readyDocuments.length;
@@ -57,7 +66,7 @@ export function DocumentSelector({ selected, onChange }: DocumentSelectorProps) 
       </div>
       <ul className="max-h-56 space-y-0.5 overflow-y-auto" role="group" aria-label="Documents">
         {readyDocuments.map((document) => {
-          const checkboxId = `doc-select-${document.document_id}`;
+          const checkboxId = `doc-select-${instanceId}-${document.document_id}`;
           return (
             <li
               key={document.document_id}
