@@ -10,7 +10,14 @@ const FRONTEND_ORIGIN = `http://127.0.0.1:${FRONTEND_PORT}`;
 
 // Resolve the repo's own venv Python so the test backend has fastapi/uvicorn
 // installed without depending on whatever `python` resolves to on PATH.
-const PYTHON = path.resolve(__dirname, '../../.venv/Scripts/python.exe');
+// PLAYWRIGHT_PYTHON_BIN overrides this (used by CI, where the venv is
+// created by actions/setup-python rather than the Windows dev workflow).
+const PYTHON =
+  process.env.PLAYWRIGHT_PYTHON_BIN ??
+  path.resolve(
+    __dirname,
+    process.platform === 'win32' ? '../../.venv/Scripts/python.exe' : '../../.venv/bin/python',
+  );
 const BACKEND_SCRIPT = path.resolve(__dirname, 'e2e/fixtures/test_backend.py');
 
 export default defineConfig({

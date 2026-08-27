@@ -143,6 +143,10 @@ packages = ["src/engineering_rag"]
 line-length = 110
 target-version = "py310"
 src = ["src", "tests"]
+# apps/ is an independent npm-managed package (apps/rag-chatbot); any .py
+# files inside it (e.g. e2e/fixtures/test_backend.py, a Playwright fixture)
+# are test infrastructure for that package, not part of engineering_rag.
+exclude = ["apps/"]
 
 [tool.ruff.lint]
 select = [

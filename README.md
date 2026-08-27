@@ -91,7 +91,7 @@ This repository has grown past the parser-only milestone described in most of th
 full pipeline today is:
 
 ```text
-parse (this README)  ->  chunk  ->  embed + index (Chroma)  ->  retrieve (vector/BM25/hybrid/rerank)  ->  answer (local Ollama, grounded, cited)
+parse (this README)  ->  chunk  ->  embed + index (Chroma)  ->  retrieve (vector/BM25/hybrid/rerank)  ->  answer (local Ollama, grounded, cited)  ->  chat (local web app)
 ```
 
 | Stage | CLI | Docs |
@@ -100,6 +100,7 @@ parse (this README)  ->  chunk  ->  embed + index (Chroma)  ->  retrieve (vector
 | Embedding + ChromaDB indexing | `engrag-index` | [`docs/indexing/`](docs/indexing/) |
 | Vector / hybrid (BM25 + RRF) / cross-encoder-reranked retrieval | `engrag-retrieve` | [`docs/retrieval/`](docs/retrieval/) |
 | Grounded LLM answer generation (local `qwen3:4b` via Ollama, cited, refuses when evidence is insufficient) | `engrag-ask` | [`docs/answering/`](docs/answering/) |
+| Local document-ingestion chatbot (FastAPI + React): upload, track, ask, cite | `apps/rag-chatbot/` | [`docs/chatbot/`](docs/chatbot/) |
 
 The answering backend never reparses the PDF or duplicates retrieval logic — it calls the existing
 `engrag-retrieve` pipeline, builds a token-budgeted, citable context, and validates every citation
@@ -433,6 +434,8 @@ UTF-8 with LF regardless.
 
 | Document | Contents |
 |---|---|
+| [`docs/chatbot/COMPLETION_REPORT.md`](docs/chatbot/COMPLETION_REPORT.md) | Evidence for the document-ingestion chatbot milestone: real acceptance run, tests, quality gates, CI |
+| [`docs/chatbot/ARCHITECTURE.md`](docs/chatbot/ARCHITECTURE.md) · [`API.md`](docs/chatbot/API.md) · [`DOCUMENT_LIFECYCLE.md`](docs/chatbot/DOCUMENT_LIFECYCLE.md) · [`SECURITY.md`](docs/chatbot/SECURITY.md) · [`COMMANDS.md`](docs/chatbot/COMMANDS.md) · [`USER_GUIDE.md`](docs/chatbot/USER_GUIDE.md) · [`TESTING.md`](docs/chatbot/TESTING.md) · [`TROUBLESHOOTING.md`](docs/chatbot/TROUBLESHOOTING.md) | Chatbot architecture, API reference, document lifecycle, threat model, commands, user guide, testing, troubleshooting |
 | [`docs/answering/ANSWERING_COMPLETION_REPORT.md`](docs/answering/ANSWERING_COMPLETION_REPORT.md) | Evidence for the grounded-answering milestone: Ollama/model digest, tests, quality gates, real acceptance queries |
 | [`docs/answering/GROUNDED_ANSWERING_ARCHITECTURE.md`](docs/answering/GROUNDED_ANSWERING_ARCHITECTURE.md) · [`COMMANDS.md`](docs/answering/COMMANDS.md) · [`EVALUATION.md`](docs/answering/EVALUATION.md) · [`OLLAMA_SETUP.md`](docs/answering/OLLAMA_SETUP.md) · [`SECURITY_AND_GROUNDING.md`](docs/answering/SECURITY_AND_GROUNDING.md) | Context building, token budgeting, prompts, citation validation, Ollama setup, threat model |
 | [`docs/retrieval/HYBRID_RETRIEVAL_COMPLETION_REPORT.md`](docs/retrieval/HYBRID_RETRIEVAL_COMPLETION_REPORT.md) · [`RETRIEVAL_COMPLETION_REPORT.md`](docs/retrieval/RETRIEVAL_COMPLETION_REPORT.md) | Evidence for the vector + hybrid retrieval/reranking milestones |

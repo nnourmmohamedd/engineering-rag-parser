@@ -85,9 +85,11 @@ def _fake_ask_runner(query: str, *, retrieval_mode: str, metadata_filters: dict,
     class _Citation:
         citation_id = "S1"
         chunk_id = "chunk_1"
-        document_id = (metadata_filters.get("document_id") or [None])[0] if isinstance(
-            metadata_filters.get("document_id"), list
-        ) else metadata_filters.get("document_id")
+        document_id = (
+            (metadata_filters.get("document_id") or [None])[0]
+            if isinstance(metadata_filters.get("document_id"), list)
+            else metadata_filters.get("document_id")
+        )
         source_filename = "sample.pdf"
         page_numbers = [1]
         section_title = "Introduction"
@@ -233,7 +235,9 @@ if __name__ == "__main__":
     host = os.environ.get("E2E_BACKEND_HOST", "127.0.0.1")
     port = int(os.environ.get("E2E_BACKEND_PORT", "8811"))
     cors_origin = os.environ.get("E2E_FRONTEND_ORIGIN", "http://127.0.0.1:4311")
-    data_root = Path(os.environ.get("E2E_DATA_ROOT", REPO_ROOT / "apps" / "rag-chatbot" / "e2e" / ".tmp-data"))
+    data_root = Path(
+        os.environ.get("E2E_DATA_ROOT", REPO_ROOT / "apps" / "rag-chatbot" / "e2e" / ".tmp-data")
+    )
     data_root.mkdir(parents=True, exist_ok=True)
 
     app = build_app(data_root, host, port, cors_origin)
