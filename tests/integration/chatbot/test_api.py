@@ -58,11 +58,47 @@ class _StubWorker(IngestionWorker):
         return True
 
 
+class _FakeCollection:
+    """In-memory stand-in for a Chroma collection, scoped by document_id.
+
+    Delete-related tests reach the real ``rollback_document``/`` _build_bm25``
+    codepaths through ``create_app``'s default orchestrator even though
+    ingestion itself is stubbed out -- without an injected fake here, those
+    calls would open the real ``engineering_documents_v1`` collection and
+    rebuild the real BM25 index on disk.
+    """
+
+    def __init__(self) -> None:
+        self.records: dict[str, str] = {}
+
+    def get(self, where: dict[str, Any] | None = None, include: Any = None, ids: Any = None) -> dict:
+        if where and "document_id" in where:
+            wanted = where["document_id"]
+            matched = [c for c, d in self.records.items() if d == wanted]
+        else:
+            matched = list(self.records)
+        return {"ids": sorted(matched)}
+
+    def delete(self, ids: list[str]) -> None:
+        for cid in ids:
+            self.records.pop(cid, None)
+
+
 @pytest.fixture
 def env(tmp_path: Path):
     config = ChatbotConfig(storage=StorageConfig(root=tmp_path / "chatbot"))
     registry = Registry(config.storage.database_path)
     worker = _StubWorker(config, registry)
+
+    from engineering_rag.chatbot.ingestion import IngestionOrchestrator
+
+    fake_collection = _FakeCollection()
+    isolated_orchestrator = IngestionOrchestrator(
+        config=config,
+        registry=registry,
+        chroma_opener=lambda: fake_collection,
+        bm25_builder=lambda: {"corpus_count": 0},
+    )
 
     captured: dict[str, Any] = {}
 
@@ -74,7 +110,11 @@ def env(tmp_path: Path):
         class _Citation:
             citation_id = "S1"
             chunk_id = "c1"
-            document_id = "ready-doc"
+            # Real citations carry the pipeline's document identity (the
+            # source file's SHA-256), not this registry's own id -- mirror
+            # that here so source-availability checks exercise the real
+            # translation instead of accidentally matching by registry id.
+            document_id = "ready-doc".ljust(64, "0")
             source_filename = "Report.pdf"
             page_numbers = [3]
             section_title = "Valves"
@@ -102,7 +142,13 @@ def env(tmp_path: Path):
         return (None, None, _Answer(), None, None)
 
     answering = GroundedAnsweringService(config=config, registry=registry, ask_runner=fake_ask)
-    app = create_app(config, registry=registry, worker=worker, answering=answering)
+    app = create_app(
+        config,
+        registry=registry,
+        worker=worker,
+        answering=answering,
+        orchestrator=isolated_orchestrator,
+    )
 
     with TestClient(app) as client:
         yield client, registry, worker, captured, config
@@ -322,7 +368,10 @@ class TestDocumentEndpoints:
             response = client.delete(f"{API_PREFIX}/documents/d1")
             assert response.status_code == 200
             assert response.json()["chunks_removed"] == 2
-            assert calls == ["d1", "bm25_rebuilt"]
+            # Delete must pass the pipeline's own document identity (source
+            # SHA-256), not this registry's id -- that's what Chroma/BM25
+            # actually key records by.
+            assert calls == ["d1".ljust(64, "0"), "bm25_rebuilt"]
             assert client.get(f"{API_PREFIX}/documents/d1").status_code == 404
 
 
@@ -430,8 +479,9 @@ class TestAskSelectionIsolation:
             json={"query": "What is a valve?", "selected_document_ids": ["ready-doc"]},
         )
         assert response.status_code == 200
-        # The filter reached the pipeline as a real query-time restriction.
-        assert captured["metadata_filters"] == {"document_id": ["ready-doc"]}
+        # The filter reached the pipeline as a real query-time restriction,
+        # translated to the pipeline's own document identity (source SHA-256).
+        assert captured["metadata_filters"] == {"document_id": ["ready-doc".ljust(64, "0")]}
         assert "other-doc" not in str(captured["metadata_filters"])
 
     def test_multi_document_selection_passes_all_selected_ids(self, env) -> None:
@@ -444,7 +494,9 @@ class TestAskSelectionIsolation:
             f"{API_PREFIX}/conversations/{cid}/messages",
             json={"query": "q", "selected_document_ids": ["ready-doc", "second-doc"]},
         )
-        assert captured["metadata_filters"] == {"document_id": ["ready-doc", "second-doc"]}
+        assert captured["metadata_filters"] == {
+            "document_id": ["ready-doc".ljust(64, "0"), "second-doc".ljust(64, "0")]
+        }
 
     def test_empty_selection_is_refused_not_widened(self, env) -> None:
         client, registry, _worker, captured, _config = env
@@ -565,6 +617,9 @@ class TestAnswerPersistence:
             f"{API_PREFIX}/conversations/{cid}/messages",
             json={"query": "q", "selected_document_ids": ["ready-doc"]},
         )
+
+        before = client.get(f"{API_PREFIX}/conversations/{cid}").json()
+        assert before["messages"][1]["citations"][0]["source_available"] is True
 
         registry.update_document("ready-doc", deleted_at=utc_now(), status=DocumentStatus.DELETED)
         detail = client.get(f"{API_PREFIX}/conversations/{cid}").json()

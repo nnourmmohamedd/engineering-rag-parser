@@ -62,6 +62,7 @@ class CitationSummary(_Model):
 
     citation_id: str
     chunk_id: str
+    document_id: str | None = None
     source_filename: str | None = None
     page_numbers: list[int] = Field(default_factory=list)
     section_title: str | None = None

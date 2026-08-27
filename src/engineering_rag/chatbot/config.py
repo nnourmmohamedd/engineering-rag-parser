@@ -100,6 +100,15 @@ class ChatbotConfig(_Frozen):
 
     answering_profile: Path = Field(default=Path("configs/answering_production.yaml"))
     retrieval_profile: Path = Field(default=Path("configs/retrieval_production.yaml"))
+    chunker_profile: Path = Field(
+        default=Path("configs/chunker_bge.yaml"),
+        description=(
+            "Must stay aligned with the indexing profile's embedding model: "
+            "the chunker measures token counts with the tokenizer named here, "
+            "and the indexer rejects any chunk run measured with a mismatched "
+            "tokenizer before it ever reaches Chroma."
+        ),
+    )
     parser_output_root: Path = Field(default_factory=lambda: default_output_root() / "parser")
     chunker_output_root: Path = Field(default_factory=lambda: default_output_root() / "chunker")
 

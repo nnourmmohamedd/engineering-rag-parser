@@ -96,7 +96,10 @@ def env(tmp_path: Path):
 
     def indexer(chunk_run_dir: Path) -> _Result:
         state["calls"].append("index")
-        collection.add_document("doc1", ["c1", "c2", "c3"])
+        # Real chunk records are keyed by the source file's SHA-256 (the
+        # pipeline's own document identity, see services/chunker/ids.py),
+        # not by this registry's document id -- mirror that here.
+        collection.add_document(document.sha256, ["c1", "c2", "c3"])
         return _Result(chunk_run_dir)
 
     def bm25() -> dict:

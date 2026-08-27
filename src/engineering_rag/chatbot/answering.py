@@ -197,7 +197,16 @@ class GroundedAnsweringService:
         selected = resolve_selection(self._registry, document_ids)
         # The selection boundary: a real query-time filter, applied by Chroma
         # (native $in) and by BM25 before truncation -- not a post-hoc slice.
-        metadata_filters: dict[str, Any] = {"document_id": selected}
+        # Chroma/BM25 key chunks by the source file's own SHA-256 (the
+        # pipeline's stable document identity, see services/chunker/ids.py),
+        # not by this application's registry id, so the filter must be
+        # translated before it reaches the retrieval layer.
+        selected_hashes: list[str] = []
+        for doc_id in selected:
+            record = self._registry.get_document(doc_id)
+            assert record is not None  # resolve_selection just confirmed this
+            selected_hashes.append(record.sha256)
+        metadata_filters: dict[str, Any] = {"document_id": selected_hashes}
 
         self._emit(on_event, {"type": "stage", "stage": "retrieval", "status": "running"})
 

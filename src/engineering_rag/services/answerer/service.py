@@ -326,6 +326,7 @@ class GroundedAnswerService:
                 CitationSummary(
                     citation_id=cid,
                     chunk_id=s.chunk_id,
+                    document_id=s.document_id,
                     source_filename=s.source_filename,
                     page_numbers=s.page_numbers,
                     section_title=s.section_title,

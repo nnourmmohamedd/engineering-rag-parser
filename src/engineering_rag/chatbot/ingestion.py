@@ -212,9 +212,10 @@ class IngestionOrchestrator:
         if self._chunker_runner is not None:
             return self._chunker_runner(parser_run_dir)
         from engineering_rag.pipelines.chunking_pipeline import run_chunking_pipeline
-        from engineering_rag.services.chunker.config import ChunkerConfig
+        from engineering_rag.services.chunker.config import load_config as load_chunker_config
 
-        return run_chunking_pipeline(parser_run_dir, ChunkerConfig(), self._config.chunker_output_root)
+        config = load_chunker_config(self._config.chunker_profile)
+        return run_chunking_pipeline(parser_run_dir, config, self._config.chunker_output_root)
 
     def _run_indexer(self, chunk_run_dir: Path) -> Any:
         if self._indexer_runner is not None:
@@ -400,7 +401,7 @@ class IngestionOrchestrator:
 
                 # --- reconcile and activate --------------------------------
                 reporter.enter(JobStage.INDEX_VALIDATION)
-                report = self.reconcile(document_id)
+                report = self.reconcile(document.sha256)
                 if not report.consistent:
                     raise ChatbotError(
                         ErrorCode.INDEX_VALIDATION_FAILED,
@@ -443,7 +444,7 @@ class IngestionOrchestrator:
 
         except IngestionCancelled:
             if chroma_written:
-                self.rollback_document(document_id, snapshot)
+                self.rollback_document(document.sha256, snapshot)
             else:
                 self._discard_snapshot(snapshot)
             self._fail(
@@ -475,7 +476,7 @@ class IngestionOrchestrator:
                 exc_info=True,
             )
             if chroma_written:
-                self.rollback_document(document_id, snapshot)
+                self.rollback_document(document.sha256, snapshot)
             else:
                 self._discard_snapshot(snapshot)
             self._fail(

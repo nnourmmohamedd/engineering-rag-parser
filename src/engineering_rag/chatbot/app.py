@@ -404,7 +404,7 @@ def create_app(
 
         removed: list[str] = []
         try:
-            removed = shared_orchestrator.rollback_document(document_id)
+            removed = shared_orchestrator.rollback_document(record.sha256)
             shared_orchestrator._build_bm25()
         except Exception:  # noqa: BLE001 - the document is still marked deleted below
             logger.warning("Index cleanup during delete was incomplete", exc_info=True)
@@ -495,7 +495,9 @@ def create_app(
     )
     def get_conversation(conversation_id: str) -> ConversationDetailResponse:
         record = _require_conversation(store, conversation_id)
-        available = {d.document_id for d in store.list_documents()}
+        # Citations carry the pipeline's own document identity (source
+        # SHA-256, see services/chunker/ids.py), not this registry's id.
+        available = {d.sha256 for d in store.list_documents()}
         return ConversationDetailResponse(
             conversation=ConversationSummary.from_record(record),
             messages=[
@@ -584,7 +586,9 @@ def create_app(
             selected_document_ids=payload.selected_document_ids,
             retrieval_mode=payload.retrieval_mode,
         )
-        available = {d.document_id for d in store.list_documents()}
+        # Citations carry the pipeline's own document identity (source
+        # SHA-256, see services/chunker/ids.py), not this registry's id.
+        available = {d.sha256 for d in store.list_documents()}
         return [
             MessageResponse.from_record(user_message, available_document_ids=available),
             MessageResponse.from_record(assistant_message, available_document_ids=available),
