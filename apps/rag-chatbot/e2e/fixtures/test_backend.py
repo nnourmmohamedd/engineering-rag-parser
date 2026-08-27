@@ -175,8 +175,15 @@ def build_app(data_root: Path, host: str, port: int, cors_origin: str):
     _pending_document_id: dict[str, str] = {}
 
     def indexer_runner(chunk_run_dir: Path) -> _Result:
+        # Real chunk records are keyed by the source file's SHA-256 (the
+        # pipeline's own document identity, see services/chunker/ids.py),
+        # not by this registry's document id -- reconcile()/rollback_document()
+        # both key off it too, so this fake must mirror that or every
+        # reconciliation fails and no document ever reaches READY.
         document_id = _pending_document_id.get("current", "unknown")
-        collection.add_document(document_id, [f"{document_id}_c1", f"{document_id}_c2", f"{document_id}_c3"])
+        record = registry.get_document(document_id)
+        sha256 = record.sha256 if record is not None else document_id
+        collection.add_document(sha256, [f"{sha256}_c1", f"{sha256}_c2", f"{sha256}_c3"])
         time.sleep(0.3)  # observable VECTOR_INDEXING stage
         return _Result(chunk_run_dir)
 
