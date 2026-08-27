@@ -51,19 +51,22 @@ jobs:
         # bm25s (pure Python + numpy, no model download). `answering` adds
         # httpx (already transitively installed via chromadb) for the local
         # Ollama client, and reuses `chunking`'s transformers for the Qwen3
-        # tokenizer. Fast tests never download the real BGE embedding model,
-        # the real cross-encoder reranker, or call a real Ollama server (a
-        # deterministic fake embedder/reranker/LLM client is used throughout
-        # tests/unit and tests/integration/databases — see
-        # tests/support/fake_embedder.py, tests/support/fake_reranker.py,
-        # tests/support/fake_llm_client.py) and chromadb/bm25s both run fully
-        # local against tmp_path, so this install does not make fast CI
-        # depend on any network access beyond the install step itself (and
-        # the small, tokenizer-files-only Qwen3 tokenizer download the
-        # context-builder tests exercise -- a few MB, not a model weight).
+        # tokenizer. `chatbot` adds fastapi/uvicorn/python-multipart, needed
+        # to collect tests/unit/chatbot and tests/integration/chatbot (a
+        # FastAPI TestClient, no real server process). Fast tests never
+        # download the real BGE embedding model, the real cross-encoder
+        # reranker, or call a real Ollama server (a deterministic fake
+        # embedder/reranker/LLM client is used throughout tests/unit and
+        # tests/integration/databases — see tests/support/fake_embedder.py,
+        # tests/support/fake_reranker.py, tests/support/fake_llm_client.py)
+        # and chromadb/bm25s both run fully local against tmp_path, so this
+        # install does not make fast CI depend on any network access beyond
+        # the install step itself (and the small, tokenizer-files-only
+        # Qwen3 tokenizer download the context-builder tests exercise -- a
+        # few MB, not a model weight).
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,chunking,indexing,hybrid,answering]"
+          python -m pip install -e ".[dev,chunking,indexing,hybrid,answering,chatbot]"
 
       - name: Ruff format check
         run: ruff format --check .
