@@ -11,7 +11,11 @@ export function formatBytes(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB'];
   const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / 1024 ** exponent;
-  return `${value >= 10 || exponent === 0 ? Math.round(value) : value.toFixed(1)} ${units[exponent]}`;
+  const rounded =
+    value >= 10 || exponent === 0
+      ? String(Math.round(value))
+      : value.toFixed(1).replace(/\.0$/, '');
+  return `${rounded} ${units[exponent]}`;
 }
 
 /** Duration for humans: seconds under a minute, then m/s, then h/m. */
