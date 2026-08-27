@@ -35,6 +35,7 @@ from engineering_rag.chatbot.answering import (
 )
 from engineering_rag.chatbot.config import ChatbotConfig, load_chatbot_config
 from engineering_rag.chatbot.errors import ChatbotError, ErrorCode, translate_exception
+from engineering_rag.chatbot.ingestion import IngestionOrchestrator
 from engineering_rag.chatbot.models import (
     ConversationMessageRecord,
     ConversationRecord,
@@ -112,12 +113,22 @@ def create_app(
     registry: Registry | None = None,
     worker: IngestionWorker | None = None,
     answering: GroundedAnsweringService | None = None,
+    orchestrator: IngestionOrchestrator | None = None,
     start_worker: bool = True,
 ) -> FastAPI:
-    """Build the application. Every collaborator is injectable, so tests need no real models."""
+    """Build the application. Every collaborator is injectable, so tests need no real models.
+
+    ``orchestrator`` (when the caller doesn't already supply a fully-built
+    ``worker``) is shared between the worker and the delete endpoint, so an
+    injected fake pipeline applies consistently to every mutation path --
+    delete must not fall back to a fresh, real-pipeline orchestrator.
+    """
     settings = config or load_chatbot_config()
     store = registry or Registry(settings.storage.database_path)
-    ingestion_worker = worker or IngestionWorker(config=settings, registry=store)
+    shared_orchestrator = orchestrator or IngestionOrchestrator(config=settings, registry=store)
+    ingestion_worker = worker or IngestionWorker(
+        config=settings, registry=store, orchestrator=shared_orchestrator
+    )
     answer_service = answering or GroundedAnsweringService(config=settings, registry=store)
 
     @asynccontextmanager
@@ -391,13 +402,10 @@ def create_app(
         record = _require_document(store, document_id)
         store.update_document(document_id, status=DocumentStatus.DELETING)
 
-        from engineering_rag.chatbot.ingestion import IngestionOrchestrator
-
-        orchestrator = IngestionOrchestrator(config=settings, registry=store)
         removed: list[str] = []
         try:
-            removed = orchestrator.rollback_document(document_id)
-            orchestrator._build_bm25()
+            removed = shared_orchestrator.rollback_document(document_id)
+            shared_orchestrator._build_bm25()
         except Exception:  # noqa: BLE001 - the document is still marked deleted below
             logger.warning("Index cleanup during delete was incomplete", exc_info=True)
 

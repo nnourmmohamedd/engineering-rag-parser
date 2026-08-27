@@ -292,7 +292,38 @@ class TestDocumentEndpoints:
         assert response.status_code == 200
         assert response.json()["deleted"] is True
         assert registry.get_document("d1").status is DocumentStatus.DELETED
-        assert client.get(f"{API_PREFIX}/documents/d1").status_code == 404
+
+    def test_delete_uses_the_same_injected_orchestrator_as_the_worker(self, tmp_path: Path) -> None:
+        """Regression test: delete_document must not fall back to a fresh,
+        real-pipeline orchestrator -- it has to reuse whatever orchestrator
+        (real or, as here, fake) the app was built with, exactly like the
+        worker does. Otherwise an injected fake pipeline would apply to
+        ingestion but silently not to deletion.
+        """
+        from engineering_rag.chatbot.ingestion import IngestionOrchestrator
+
+        config = ChatbotConfig(storage=StorageConfig(root=tmp_path / "chatbot"))
+        registry = Registry(config.storage.database_path)
+        _ready_document(registry, "d1")
+
+        orchestrator = IngestionOrchestrator(config=config, registry=registry)
+        calls: list[str] = []
+        orchestrator.rollback_document = lambda document_id: calls.append(document_id) or ["c1", "c2"]  # type: ignore[method-assign]
+        orchestrator._build_bm25 = lambda: calls.append("bm25_rebuilt")  # type: ignore[method-assign]
+
+        app = create_app(
+            config,
+            registry=registry,
+            worker=_StubWorker(config, registry),
+            orchestrator=orchestrator,
+            start_worker=False,
+        )
+        with TestClient(app) as client:
+            response = client.delete(f"{API_PREFIX}/documents/d1")
+            assert response.status_code == 200
+            assert response.json()["chunks_removed"] == 2
+            assert calls == ["d1", "bm25_rebuilt"]
+            assert client.get(f"{API_PREFIX}/documents/d1").status_code == 404
 
 
 class TestJobEndpoints:
