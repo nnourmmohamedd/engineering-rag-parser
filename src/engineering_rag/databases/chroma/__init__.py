@@ -22,7 +22,12 @@ from .errors import (
 )
 from .metadata import chroma_safe_metadata
 from .models import INDEX_SCHEMA_VERSION, CollectionIdentity, IngestionOutcome
-from .repository import content_hash, ingest_batch
+from .repository import (
+    content_hash,
+    delete_document_records,
+    ingest_batch,
+    list_document_chunk_ids,
+)
 from .validation import round_trip_check, self_retrieval_check
 
 __all__ = [
@@ -36,8 +41,10 @@ __all__ = [
     "InvalidCollectionNameError",
     "chroma_safe_metadata",
     "content_hash",
+    "delete_document_records",
     "get_client",
     "ingest_batch",
+    "list_document_chunk_ids",
     "open_or_create_collection",
     "rebuild_collection",
     "round_trip_check",

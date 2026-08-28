@@ -47,7 +47,7 @@ from engineering_rag.services.context_builder.models import NeighborChunk
 from engineering_rag.services.context_builder.neighbor_provider import NeighborProvider
 from engineering_rag.services.embedder import EmbeddingService
 from engineering_rag.services.reranker.interface import Reranker
-from engineering_rag.services.retriever import RetrievalResponse
+from engineering_rag.services.retriever import FilterValue, RetrievalResponse
 
 __all__ = [
     "AnsweringValidationReport",
@@ -300,6 +300,7 @@ def _run_retrieval(
     collection_name: str | None,
     embedder: EmbeddingService | None,
     reranker: Reranker | None,
+    metadata_filters: dict[str, FilterValue] | None,
 ) -> tuple[Any, RetrievalResponse]:
     """Run one retrieval call via the existing public retrieval pipeline, and also return the
     opened collection (for neighbor expansion only -- read-only, never a second retrieval path).
@@ -311,7 +312,7 @@ def _run_retrieval(
         top_k=top_k,
         bm25_enabled=bm25_enabled,
         reranker_enabled=reranker_enabled,
-        metadata_filters={},
+        metadata_filters=metadata_filters or {},
         collection_name=collection_name,
         embedder=embedder,
         reranker=reranker,
@@ -331,6 +332,7 @@ def run_context_pipeline(
     collection_name: str | None = None,
     embedder: EmbeddingService | None = None,
     reranker: Reranker | None = None,
+    metadata_filters: dict[str, FilterValue] | None = None,
 ) -> tuple[RetrievalResponse, ContextPackage]:
     """Run retrieval, then build one :class:`ContextPackage`. Never calls the LLM.
 
@@ -347,6 +349,7 @@ def run_context_pipeline(
         collection_name=collection_name,
         embedder=embedder,
         reranker=reranker,
+        metadata_filters=metadata_filters,
     )
     neighbor_provider = ChromaNeighborProvider(collection) if neighbors_enabled else None
     token_counter = get_token_counter(answering_config.context_builder.tokenizer)
@@ -372,6 +375,7 @@ def run_ask_pipeline(
     embedder: EmbeddingService | None = None,
     reranker: Reranker | None = None,
     write_artifacts: bool = True,
+    metadata_filters: dict[str, FilterValue] | None = None,
 ) -> tuple[RetrievalResponse, ContextPackage, AnswerResponse, AnswerTrace, AnsweringRunDirectory | None]:
     """Full pipeline: retrieval -> context -> prompt -> generation -> grounding -> (optional) artifacts."""
     started = time.perf_counter()
@@ -385,6 +389,7 @@ def run_ask_pipeline(
         collection_name=collection_name,
         embedder=embedder,
         reranker=reranker,
+        metadata_filters=metadata_filters,
     )
 
     resolved_client = build_llm_client(answering_config, llm_client)

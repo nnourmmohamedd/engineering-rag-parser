@@ -8,13 +8,17 @@ loads one) and never rebuilds or writes to the index while searching.
 Metadata filtering limitation: ``bm25s`` has no native metadata filter.
 Because the indexed corpus is small (currently 122 chunks), this retriever
 scores the *entire* corpus every query (cheap — sub-millisecond for this
-size) and applies the identical scalar-equality filter Chroma uses
-(``services/retriever/filters.py``'s allowed-field list) client-side to the
-full ranked list before truncating to ``top_k``. This preserves correct
-top-k semantics (filtering never removes an already-truncated candidate)
-at the cost of not scaling to a corpus where scoring everything is
-expensive — documented here rather than silently degrading behavior at
-scale.
+size) and applies the identical filter semantics Chroma uses
+(``services/retriever/filters.py``'s allowed-field list: scalar equality,
+or membership when the value is a list/tuple) client-side to the full
+ranked list *before* truncating to ``top_k``. This preserves correct top-k
+semantics (filtering never removes an already-truncated candidate) at the
+cost of not scaling to a corpus where scoring everything is expensive —
+documented here rather than silently degrading behavior at scale.
+
+Because the filter is applied before truncation, a document-scoped query
+genuinely ranks within the selected corpus; it is not a global search whose
+disallowed rows are hidden afterwards.
 """
 
 from __future__ import annotations
@@ -28,7 +32,7 @@ from engineering_rag.databases.bm25.models import BM25RawHit
 
 from .config import RetrievalSearchConfig
 from .errors import InvalidFilterError
-from .models import RetrievalHit
+from .models import FilterValue, RetrievalHit
 
 __all__ = ["BM25Retriever", "BM25SearchOutcome"]
 
@@ -43,8 +47,15 @@ class BM25SearchOutcome:
         self.duration_s = duration_s
 
 
-def _matches_filters(record_metadata: dict[str, Any], filters: dict[str, str | int | float | bool]) -> bool:
-    return all(str(record_metadata.get(key)) == str(value) for key, value in filters.items())
+def _matches_one(actual: Any, expected: FilterValue) -> bool:
+    """Mirror Chroma's semantics: a list/tuple means membership (``$in``), a scalar means equality."""
+    if isinstance(expected, list | tuple):
+        return any(str(actual) == str(candidate) for candidate in expected)
+    return str(actual) == str(expected)
+
+
+def _matches_filters(record_metadata: dict[str, Any], filters: dict[str, FilterValue]) -> bool:
+    return all(_matches_one(record_metadata.get(key), value) for key, value in filters.items())
 
 
 def _raw_hit_to_retrieval_hit(raw: BM25RawHit) -> RetrievalHit:
@@ -79,7 +90,7 @@ class BM25Retriever:
         self,
         query: str,
         top_k: int,
-        metadata_filters: dict[str, str | int | float | bool] | None = None,
+        metadata_filters: dict[str, FilterValue] | None = None,
     ) -> BM25SearchOutcome:
         """Rank the entire indexed corpus and return the top ``top_k`` matches (post-filter).
 

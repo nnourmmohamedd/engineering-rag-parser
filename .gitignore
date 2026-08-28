@@ -63,3 +63,21 @@ logs/
 Thumbs.db
 .DS_Store
 desktop.ini
+
+# --- Frontend (apps/rag-chatbot) ---
+node_modules/
+apps/*/dist/
+apps/*/coverage/
+apps/*/playwright-report/
+apps/*/test-results/
+apps/*/blob-report/
+apps/*/.vite/
+apps/*/*.local
+apps/*/*.tsbuildinfo
+
+# --- Chatbot backend local application state (registry DB, uploads, artifacts) ---
+data/chatbot/
+apps/*/e2e/.tmp-data/
+
+# Synthetic E2E fixture PDF is intentionally committed (not real/confidential data).
+!apps/rag-chatbot/e2e/fixtures/sample.pdf

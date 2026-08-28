@@ -201,6 +201,17 @@ class BM25IndexHandle:
         self._records = records_by_position
         self.manifest = manifest
 
+    @property
+    def records(self) -> tuple[BM25CorpusRecord, ...]:
+        """Every indexed corpus record, read-only.
+
+        Exposed so a caller can reconcile this index against Chroma (does each
+        index hold the same chunks for a document?) without either reaching
+        into private state or re-reading ``corpus.jsonl`` itself. Returned as a
+        tuple so a caller cannot mutate the loaded corpus.
+        """
+        return tuple(self._records)
+
     def search(self, query: str, top_k: int) -> list[BM25RawHit]:
         """Rank every indexed document against ``query`` and return the top ``top_k``.
 

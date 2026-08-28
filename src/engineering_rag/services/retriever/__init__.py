@@ -21,6 +21,7 @@ __all__ = [
     "CorpusCompatibilityError",
     "CorpusCompatibilityReport",
     "EmptyCollectionError",
+    "FilterValue",
     "FusedHit",
     "InvalidFilterError",
     "MalformedChromaResponseError",
@@ -64,6 +65,7 @@ from .errors import (  # noqa: E402
 from .filters import build_where_clause  # noqa: E402
 from .fusion import FusedHit, reciprocal_rank_fusion  # noqa: E402
 from .models import (  # noqa: E402
+    FilterValue,
     RetrievalDiagnostics,
     RetrievalEvaluationCase,
     RetrievalEvaluationResult,

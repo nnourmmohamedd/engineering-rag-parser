@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "RETRIEVAL_RESPONSE_SCHEMA_VERSION",
+    "FilterValue",
     "RetrievalDiagnostics",
     "RetrievalEvaluationCase",
     "RetrievalEvaluationResult",
@@ -26,6 +27,12 @@ __all__ = [
     "RetrievalResponse",
     "query_hash",
 ]
+
+#: One metadata-filter value: a Chroma-legal scalar, or a non-empty list/tuple
+#: of them meaning "this field must be one of these" — translated to a native
+#: Chroma ``$in`` clause by ``services/retriever/filters.py``. This is how a
+#: query is scoped to a set of selected ``document_id`` values at query time.
+FilterValue = str | int | float | bool | list[Any] | tuple[Any, ...]
 
 #: 1.1.0: additive-only extension for hybrid retrieval + reranking — every
 #: new field defaults to ``None``/empty so a 1.0.0 consumer reading a
@@ -47,7 +54,7 @@ class RetrievalRequest(_Model):
 
     query: str
     top_k: int = Field(default=5, gt=0)
-    metadata_filters: dict[str, str | int | float | bool] = Field(default_factory=dict)
+    metadata_filters: dict[str, FilterValue] = Field(default_factory=dict)
     collection_name: str | None = Field(
         default=None, description="Override the profile's configured collection. None = use profile default."
     )
@@ -189,7 +196,7 @@ class RetrievalEvaluationCase(_Model):
     human_review_status: Literal["machine_candidate", "human_reviewed", "human_approved"] = (
         "machine_candidate"
     )
-    metadata_filters: dict[str, str | int | float | bool] = Field(default_factory=dict)
+    metadata_filters: dict[str, FilterValue] = Field(default_factory=dict)
     is_unanswerable: bool = Field(
         default=False, description="True for a deliberately negative case with no correct relevant_chunk_ids."
     )

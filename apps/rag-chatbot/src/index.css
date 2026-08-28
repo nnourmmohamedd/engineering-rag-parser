@@ -1,0 +1,181 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Restrained industrial palette: a cool slate ground with a single saturated
+ * accent, so status colour (success/warning/destructive) is the only thing
+ * competing for attention on a dense page. Both themes are authored
+ * explicitly rather than derived, so contrast is checked once and stays put.
+ */
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 215 25% 16%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 16%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 16%;
+
+    --primary: 209 79% 34%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 20% 93%;
+    --secondary-foreground: 215 25% 22%;
+
+    --muted: 214 20% 94%;
+    --muted-foreground: 215 14% 42%;
+
+    --accent: 209 79% 94%;
+    --accent-foreground: 209 79% 26%;
+
+    --destructive: 0 65% 44%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 55% 30%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 33 85% 36%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 18% 87%;
+    --input: 214 18% 87%;
+    --ring: 209 79% 42%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 216 28% 9%;
+    --foreground: 213 25% 92%;
+
+    --card: 216 25% 12%;
+    --card-foreground: 213 25% 92%;
+
+    --popover: 216 25% 12%;
+    --popover-foreground: 213 25% 92%;
+
+    --primary: 205 85% 62%;
+    --primary-foreground: 216 40% 10%;
+
+    --secondary: 216 20% 18%;
+    --secondary-foreground: 213 25% 90%;
+
+    --muted: 216 20% 17%;
+    --muted-foreground: 215 16% 66%;
+
+    --accent: 209 45% 22%;
+    --accent-foreground: 205 85% 80%;
+
+    --destructive: 0 62% 58%;
+    --destructive-foreground: 216 40% 10%;
+
+    --success: 152 45% 52%;
+    --success-foreground: 216 40% 10%;
+
+    --warning: 36 80% 60%;
+    --warning-foreground: 216 40% 10%;
+
+    --border: 216 18% 22%;
+    --input: 216 18% 24%;
+    --ring: 205 85% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    /* Global safeguard: the page body must never scroll horizontally.
+       Wide content (tables, code blocks) scrolls inside its own
+       overflow-x-auto container instead. This also absorbs off-screen
+       elements some libraries position outside the viewport by design
+       (e.g. an aria-live toast region's hidden announcer span), which
+       are invisible but would otherwise still register as page overflow. */
+    @apply overflow-x-hidden bg-background text-foreground antialiased;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+
+  /* A visible focus ring everywhere is non-negotiable for keyboard users. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Respect a user's reduced-motion preference rather than overriding it. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Long filenames and chunk ids must never widen the page. */
+  .truncate-middle {
+    @apply block overflow-hidden text-ellipsis whitespace-nowrap;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}
+
+/* Rendered Markdown (document previews and answers). Deliberately scoped so
+   document-derived content cannot restyle the application chrome. */
+.prose-engineering {
+  @apply text-sm leading-relaxed text-foreground;
+}
+.prose-engineering h1,
+.prose-engineering h2,
+.prose-engineering h3 {
+  @apply mb-2 mt-4 font-semibold text-foreground;
+}
+.prose-engineering h1 {
+  @apply text-lg;
+}
+.prose-engineering h2 {
+  @apply text-base;
+}
+.prose-engineering h3 {
+  @apply text-sm;
+}
+.prose-engineering p {
+  @apply mb-3;
+}
+.prose-engineering ul,
+.prose-engineering ol {
+  @apply mb-3 ml-5 list-outside space-y-1;
+}
+.prose-engineering ul {
+  @apply list-disc;
+}
+.prose-engineering ol {
+  @apply list-decimal;
+}
+.prose-engineering code {
+  @apply rounded bg-muted px-1 py-0.5 font-mono text-xs;
+}
+.prose-engineering pre {
+  @apply mb-3 overflow-x-auto rounded-md bg-muted p-3;
+}
+.prose-engineering table {
+  @apply mb-3 w-full border-collapse text-xs;
+}
+.prose-engineering th,
+.prose-engineering td {
+  @apply border border-border px-2 py-1 text-left;
+}
+.prose-engineering th {
+  @apply bg-muted font-semibold;
+}
