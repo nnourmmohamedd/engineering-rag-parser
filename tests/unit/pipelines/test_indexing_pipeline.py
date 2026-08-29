@@ -30,14 +30,16 @@ pytestmark = pytest.mark.integration  # touches a real (ephemeral) chromadb + a 
 _TOKENIZER = "sentence-transformers/all-MiniLM-L6-v2"
 
 
-def _chunk_record(chunk_id: str, index: int, text: str | None = None) -> dict[str, Any]:
+def _chunk_record(
+    chunk_id: str, index: int, text: str | None = None, source_filename: str = "doc.pdf"
+) -> dict[str, Any]:
     if text is None:
         text = f"Some faithful chunk content about valve number {index}, unique per chunk."
     return {
         "schema_version": "1.0.0",
         "chunk_id": chunk_id,
         "document_id": "docsha256",
-        "source_filename": "doc.pdf",
+        "source_filename": source_filename,
         "source_sha256": "docsha256",
         "chunk_index": index,
         "content_type": "text",
@@ -76,10 +78,11 @@ def _write_chunk_run(
     n: int = 5,
     run_id: str = "20260101T000000Z-deadbeef",
     subdir: str = "chunker_run",
+    source_filename: str = "doc.pdf",
 ) -> Path:
     run_dir = tmp_path / subdir
     run_dir.mkdir(parents=True, exist_ok=True)
-    records = [_chunk_record(f"chunk_{i:04d}", i) for i in range(n)]
+    records = [_chunk_record(f"chunk_{i:04d}", i, source_filename=source_filename) for i in range(n)]
     (run_dir / "chunks.jsonl").write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
     manifest = {
         "run_id": run_id,
@@ -151,17 +154,26 @@ class TestIdempotency:
 
     def test_rerun_with_different_chunk_run_id_is_still_idempotent(self, tmp_path: Path) -> None:
         """A document re-chunked from scratch (e.g. re-uploaded through the chatbot after
-        already being indexed via the CLI) gets a brand new chunker ``run_id`` even when
-        every chunk's actual text is byte-identical to what's already indexed. That must
-        still be treated as identical content, not a conflicting duplicate -- regression
-        test for a bug where ``chunk_run_id`` leaked into the content-hash computation and
-        made every re-ingestion of unchanged content look like a hard conflict."""
-        run_dir_a = _write_chunk_run(tmp_path, run_id="20260101T000000Z-deadbeef", subdir="run_a")
+        already being indexed via the CLI) gets a brand new chunker ``run_id``, and is parsed
+        from whatever filename it happens to be staged under this time (e.g. a chatbot upload's
+        generated storage name vs. the original filename used to build the corpus via the CLI)
+        -- even when every chunk's actual text is byte-identical to what's already indexed. That
+        must still be treated as identical content, not a conflicting duplicate -- regression
+        test for a bug where chunk_run_id and source_filename leaked into the content-hash
+        computation and made every re-ingestion of unchanged content look like a hard conflict."""
+        run_dir_a = _write_chunk_run(
+            tmp_path, run_id="20260101T000000Z-deadbeef", subdir="run_a", source_filename="original.pdf"
+        )
         config = _config(tmp_path)
         run_indexing_pipeline(run_dir_a, config, embedder=FakeEmbeddingService())
         time.sleep(1.1)  # run directories are timestamp-named at 1s resolution; avoid a collision
 
-        run_dir_b = _write_chunk_run(tmp_path, run_id="20260102T000000Z-c0ffee00", subdir="run_b")
+        run_dir_b = _write_chunk_run(
+            tmp_path,
+            run_id="20260102T000000Z-c0ffee00",
+            subdir="run_b",
+            source_filename="a1b2c3d4e5f6.pdf",
+        )
         result2 = run_indexing_pipeline(run_dir_b, config, embedder=FakeEmbeddingService())
 
         assert result2.status in ("PASS", "PASS_WITH_WARNINGS")

@@ -242,7 +242,6 @@ def _build_metadata(
     warnings = record.get("warnings") or []
     fields = {
         "document_id": record.get("document_id"),
-        "source_filename": record.get("source_filename"),
         "source_sha256": record.get("source_sha256"),
         "chunk_index": record.get("chunk_index"),
         "content_type": record.get("content_type"),
@@ -260,11 +259,16 @@ def _build_metadata(
         "warnings_summary": "; ".join(warnings)[:200],
     }
     safe = chroma_safe_metadata(fields)
-    # content_hash must reflect content/config only, never the run identifier -- chunk_run_id
-    # is a fresh timestamp on every rerun, so including it here would make every re-ingestion
-    # of unchanged content look like a conflicting duplicate instead of an idempotent no-op.
+    # content_hash must reflect content/config only, never provenance that legitimately varies
+    # between reruns of byte-identical content: chunk_run_id is a fresh timestamp every run, and
+    # source_filename is whatever the file happened to be named/staged as on disk this time (e.g.
+    # a chatbot upload's generated storage name vs. the original filename used to build the
+    # corpus via the CLI). Including either would make every re-ingestion of unchanged content
+    # look like a conflicting duplicate instead of an idempotent no-op.
     safe["content_hash"] = content_hash(record["retrieval_text"], safe)
-    safe["chunk_run_id"] = chunk_run_id
+    safe.update(
+        chroma_safe_metadata({"chunk_run_id": chunk_run_id, "source_filename": record.get("source_filename")})
+    )
     return safe
 
 
