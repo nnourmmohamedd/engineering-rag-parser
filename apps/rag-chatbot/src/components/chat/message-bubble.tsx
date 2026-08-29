@@ -1,13 +1,51 @@
 import { AlertOctagon, Check, Copy, ShieldQuestion, User } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type AnchorHTMLAttributes } from 'react';
 import Markdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { Message } from '@/lib/types';
+import { useCitationViewer } from '@/hooks/use-citation-viewer';
+import { remarkCitationLinks } from '@/lib/remark-citation-links';
+import type { Citation, Message } from '@/lib/types';
 import { cn, formatDuration } from '@/lib/utils';
 import { CitationCard } from './citation-card';
+
+const CITATION_HREF_RE = /^#citation-(S\d+)$/;
+
+/** Intercepts `#citation-S<n>` links produced by `remarkCitationLinks` and opens the PDF
+ * viewer instead of navigating -- every other link renders and behaves normally. */
+function citationAwareLink(
+  citations: Citation[],
+  openCitation: (c: Citation[], i: number) => void,
+) {
+  return function CitationLink({
+    href,
+    children,
+    ...props
+  }: AnchorHTMLAttributes<HTMLAnchorElement>) {
+    const match = href?.match(CITATION_HREF_RE);
+    const citationIndex = match ? citations.findIndex((c) => c.citation_id === match[1]) : -1;
+    const targetCitation = citationIndex === -1 ? undefined : citations[citationIndex];
+    if (!targetCitation) {
+      return (
+        <a href={href} target="_blank" rel="noreferrer" {...props}>
+          {children}
+        </a>
+      );
+    }
+    return (
+      <button
+        type="button"
+        className="rounded-sm bg-primary/10 px-1 font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={() => openCitation(citations, citationIndex)}
+        aria-label={`Open citation ${targetCitation.citation_id} source`}
+      >
+        {children}
+      </button>
+    );
+  };
+}
 
 const STATUS_COPY: Record<string, { label: string; tone: 'success' | 'warning' | 'destructive' }> =
   {
@@ -20,6 +58,7 @@ const STATUS_COPY: Record<string, { label: string; tone: 'success' | 'warning' |
 
 export function MessageBubble({ message }: { message: Message }) {
   const [copied, setCopied] = useState(false);
+  const { openCitation } = useCitationViewer();
   const isUser = message.role === 'user';
 
   const copy = async () => {
@@ -83,7 +122,13 @@ export function MessageBubble({ message }: { message: Message }) {
         >
           {message.content ? (
             <div className="prose-engineering">
-              <Markdown rehypePlugins={[rehypeSanitize]}>{message.content}</Markdown>
+              <Markdown
+                remarkPlugins={[remarkCitationLinks]}
+                rehypePlugins={[rehypeSanitize]}
+                components={{ a: citationAwareLink(message.citations, openCitation) }}
+              >
+                {message.content}
+              </Markdown>
             </div>
           ) : (
             <p className="italic text-muted-foreground">No answer text was produced.</p>
@@ -116,8 +161,13 @@ export function MessageBubble({ message }: { message: Message }) {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Sources ({message.citations.length})
             </p>
-            {message.citations.map((citation) => (
-              <CitationCard key={citation.citation_id} citation={citation} />
+            {message.citations.map((citation, i) => (
+              <CitationCard
+                key={citation.citation_id}
+                citation={citation}
+                allCitations={message.citations}
+                index={i}
+              />
             ))}
           </div>
         )}

@@ -79,5 +79,6 @@ apps/*/*.tsbuildinfo
 data/chatbot/
 apps/*/e2e/.tmp-data/
 
-# Synthetic E2E fixture PDF is intentionally committed (not real/confidential data).
+# Synthetic E2E fixture PDFs are intentionally committed (not real/confidential data).
 !apps/rag-chatbot/e2e/fixtures/sample.pdf
+!apps/rag-chatbot/e2e/fixtures/sample-real.pdf

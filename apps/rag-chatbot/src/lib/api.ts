@@ -105,6 +105,9 @@ export const api = {
   previewDocument: (id: string) =>
     request<DocumentPreview>(`/documents/${encodeURIComponent(id)}/preview`),
 
+  /** URL only -- PDF.js fetches this itself (with Range requests), never a raw `fetch` here. */
+  documentSourceUrl: (id: string) => `${BASE}/documents/${encodeURIComponent(id)}/source`,
+
   uploadDocument: (file: File, parserProfile: string, forceNewVersion = false) => {
     const form = new FormData();
     form.append('file', file);

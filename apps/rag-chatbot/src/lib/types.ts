@@ -138,6 +138,13 @@ export interface SystemStatus {
   data_root_label: string;
 }
 
+/** One page/bbox provenance entry. `bbox` is `[left, top, right, bottom]` PDF points,
+ * bottom-left page origin -- see `services/chunker/models.py::ProvenanceRecord`. */
+export interface ProvenanceEntry {
+  page_no: number;
+  bbox: [number, number, number, number] | null;
+}
+
 export interface Citation {
   citation_id: string;
   chunk_id: string | null;
@@ -147,6 +154,15 @@ export interface Citation {
   section_title: string | null;
   supporting_quote: string | null;
   content_hash: string | null;
+  provenance: ProvenanceEntry[];
+  /** True only when `provenance`'s bbox denotes this exact chunk's own text (never a
+   * recursively split or merged chunk, where a bbox -- if present -- covers the whole
+   * original element, not this specific passage). Never estimated by the frontend. */
+  bbox_reliable: boolean;
+  /** This application's own registry id for the source document -- use this, never
+   * `document_id` (the pipeline's content-hash identity), to fetch the PDF from
+   * `GET /documents/{source_document_id}/source`. Null when unavailable. */
+  source_document_id: string | null;
   /** False once the cited document has been deleted; the citation itself is never rewritten. */
   source_available: boolean;
 }

@@ -95,6 +95,11 @@ def _fake_ask_runner(query: str, *, retrieval_mode: str, metadata_filters: dict,
         section_title = "Introduction"
         supporting_quote = "This is a sample engineering document used for end-to-end testing."
         content_hash = "hash1"
+        # No real Docling provenance in this fake ingestion path -- matches production
+        # behavior for any chunk the parser never actually ran bbox extraction on, and
+        # exercises the viewer's text-layer quotation-match fallback in E2E tests.
+        provenance: list[Any] = []
+        bbox_reliable = False
 
     class _Validation:
         status = "PASS"
@@ -104,10 +109,38 @@ def _fake_ask_runner(query: str, *, retrieval_mode: str, metadata_filters: dict,
         citation_coverage_ratio = 1.0
         repair_attempted = False
 
+    class _Citation2:
+        citation_id = "S2"
+        chunk_id = "chunk_2"
+        document_id = _Citation.document_id
+        source_filename = "sample.pdf"
+        page_numbers = [2]
+        section_title = "Maintenance"
+        supporting_quote = "Page 2: unrelated content about valve maintenance schedules."
+        content_hash = "hash2"
+        provenance: list[Any] = []
+        bbox_reliable = False
+
     class _AnsweredResponse:
         status = "answered"
         answer = "This is a sample engineering document used for end-to-end testing [S1]."
         citations = [_Citation()]
+        validation = _Validation()
+        stage_latencies_s = {"retrieval": 0.05, "generation": 0.2}
+        model_tag = "fake-e2e-model"
+        model_digest = "e2e0000"
+        total_latency_s = 0.3
+
+    class _MultiCitationResponse:
+        """Two claims, each backed by a citation on a different page -- lets E2E tests
+        exercise multi-citation prev/next navigation and distinct-page evidence."""
+
+        status = "answered"
+        answer = (
+            "This is a sample engineering document used for end-to-end testing [S1]. "
+            "Page 2 covers valve maintenance schedules [S2]."
+        )
+        citations = [_Citation(), _Citation2()]
         validation = _Validation()
         stage_latencies_s = {"retrieval": 0.05, "generation": 0.2}
         model_tag = "fake-e2e-model"
@@ -135,6 +168,8 @@ def _fake_ask_runner(query: str, *, retrieval_mode: str, metadata_filters: dict,
     time.sleep(0.05)  # a tiny, real delay so the UI's loading state is observable
     if "unsupported" in query.lower():
         return (None, None, _RefusalResponse(), None, None)
+    if "multi-part" in query.lower():
+        return (None, None, _MultiCitationResponse(), None, None)
     return (None, None, _AnsweredResponse(), None, None)
 
 
