@@ -256,12 +256,15 @@ def _build_metadata(
         "chunk_schema_version": record.get("schema_version"),
         "tokenizer_name": embedding_model_name,
         "token_count": recomputed_token_count,
-        "chunk_run_id": chunk_run_id,
         "index_schema_version": "1.0.0",
         "warnings_summary": "; ".join(warnings)[:200],
     }
     safe = chroma_safe_metadata(fields)
+    # content_hash must reflect content/config only, never the run identifier -- chunk_run_id
+    # is a fresh timestamp on every rerun, so including it here would make every re-ingestion
+    # of unchanged content look like a conflicting duplicate instead of an idempotent no-op.
     safe["content_hash"] = content_hash(record["retrieval_text"], safe)
+    safe["chunk_run_id"] = chunk_run_id
     return safe
 
 

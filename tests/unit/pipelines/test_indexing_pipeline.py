@@ -74,13 +74,15 @@ def _write_chunk_run(
     tokenizer_name: str = _TOKENIZER,
     chunker_status: str = "PASS",
     n: int = 5,
+    run_id: str = "20260101T000000Z-deadbeef",
+    subdir: str = "chunker_run",
 ) -> Path:
-    run_dir = tmp_path / "chunker_run"
+    run_dir = tmp_path / subdir
     run_dir.mkdir(parents=True, exist_ok=True)
     records = [_chunk_record(f"chunk_{i:04d}", i) for i in range(n)]
     (run_dir / "chunks.jsonl").write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
     manifest = {
-        "run_id": "20260101T000000Z-deadbeef",
+        "run_id": run_id,
         "tokenizer": {"name": tokenizer_name, "max_tokens": 256},
         "source": {"filename": "doc.pdf", "sha256": "docsha256"},
     }
@@ -144,6 +146,26 @@ class TestIdempotency:
         assert result2.status in ("PASS", "PASS_WITH_WARNINGS")
         ingestion = json.loads((result2.run_dir / "ingestion_report.json").read_text())
         assert ingestion["final_count"] == 5
+        assert ingestion["inserted_ids"] == []
+        assert len(ingestion["existing_identical_ids"]) == 5
+
+    def test_rerun_with_different_chunk_run_id_is_still_idempotent(self, tmp_path: Path) -> None:
+        """A document re-chunked from scratch (e.g. re-uploaded through the chatbot after
+        already being indexed via the CLI) gets a brand new chunker ``run_id`` even when
+        every chunk's actual text is byte-identical to what's already indexed. That must
+        still be treated as identical content, not a conflicting duplicate -- regression
+        test for a bug where ``chunk_run_id`` leaked into the content-hash computation and
+        made every re-ingestion of unchanged content look like a hard conflict."""
+        run_dir_a = _write_chunk_run(tmp_path, run_id="20260101T000000Z-deadbeef", subdir="run_a")
+        config = _config(tmp_path)
+        run_indexing_pipeline(run_dir_a, config, embedder=FakeEmbeddingService())
+        time.sleep(1.1)  # run directories are timestamp-named at 1s resolution; avoid a collision
+
+        run_dir_b = _write_chunk_run(tmp_path, run_id="20260102T000000Z-c0ffee00", subdir="run_b")
+        result2 = run_indexing_pipeline(run_dir_b, config, embedder=FakeEmbeddingService())
+
+        assert result2.status in ("PASS", "PASS_WITH_WARNINGS")
+        ingestion = json.loads((result2.run_dir / "ingestion_report.json").read_text())
         assert ingestion["inserted_ids"] == []
         assert len(ingestion["existing_identical_ids"]) == 5
 
