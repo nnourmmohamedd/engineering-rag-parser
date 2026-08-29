@@ -128,6 +128,49 @@ class TestCollectionLifecycle:
         assert outcome.inserted_ids == []
         assert outcome.final_count == 1
 
+    def test_pre_fix_formula_hash_falls_back_to_real_text_comparison(self, tmp_path: Path) -> None:
+        """Same as the stale-hash test above, but the "old" hash is computed with the actual
+        pre-fix formula (content + chunk_run_id + source_filename folded in) reproduced inline,
+        rather than an arbitrary placeholder string -- proving the fallback resolves the exact
+        real-world case, not just a synthetic one."""
+        config = _config(tmp_path)
+        identity = _identity()
+        client = get_client(config.persistence_path)
+        collection = open_or_create_collection(client, config, identity)
+
+        def pre_fix_content_hash(text: str, chunk_run_id: str, source_filename: str) -> str:
+            metadata = {
+                "document_id": "docsha256",
+                "chunk_index": 0,
+                "chunk_run_id": chunk_run_id,
+                "source_filename": source_filename,
+            }
+            return content_hash(text, metadata)
+
+        old_hash = pre_fix_content_hash("unchanged text", "20260825T073605Z-deadbeef", "original.pdf")
+        ingest_batch(
+            collection,
+            ids=["chunk_legacy"],
+            embeddings=[_vector(4)],
+            documents=["unchanged text"],
+            metadatas=[{"content_hash": old_hash}],
+            idempotent=True,
+        )
+
+        new_hash = content_hash("unchanged text", {"document_id": "docsha256", "chunk_index": 0})
+        assert new_hash != old_hash  # the two formulas must genuinely disagree for this to prove anything
+        outcome = ingest_batch(
+            collection,
+            ids=["chunk_legacy"],
+            embeddings=[_vector(4)],
+            documents=["unchanged text"],
+            metadatas=[{"content_hash": new_hash}],
+            idempotent=True,
+        )
+        assert outcome.existing_identical_ids == ["chunk_legacy"]
+        assert outcome.inserted_ids == []
+        assert outcome.final_count == 1
+
     def test_conflicting_duplicate_id_rejected(self, tmp_path: Path) -> None:
         config = _config(tmp_path)
         identity = _identity()
@@ -151,6 +194,44 @@ class TestCollectionLifecycle:
                 metadatas=[{"content_hash": content_hash("changed text", {})}],
                 idempotent=True,
             )
+
+    def test_mixed_batch_stays_atomic_on_one_real_conflict(self, tmp_path: Path) -> None:
+        """A batch with two brand-new ids and one id that genuinely conflicts (different text,
+        different hash) must write nothing at all -- not even the two novel ids -- when the
+        conflict raises. ``ingest_batch`` resolves every id's fate before issuing a single
+        ``upsert`` call, so a mid-batch conflict must never leave a partial write behind."""
+        config = _config(tmp_path)
+        identity = _identity()
+        client = get_client(config.persistence_path)
+        collection = open_or_create_collection(client, config, identity)
+
+        ingest_batch(
+            collection,
+            ids=["chunk_conflict"],
+            embeddings=[_vector(9)],
+            documents=["original text"],
+            metadatas=[{"content_hash": content_hash("original text", {})}],
+            idempotent=True,
+        )
+        assert collection.count() == 1
+
+        with pytest.raises(DuplicateIdConflictError):
+            ingest_batch(
+                collection,
+                ids=["chunk_novel_1", "chunk_novel_2", "chunk_conflict"],
+                embeddings=[_vector(10), _vector(11), _vector(12)],
+                documents=["novel text one", "novel text two", "changed text"],
+                metadatas=[
+                    {"content_hash": content_hash("novel text one", {})},
+                    {"content_hash": content_hash("novel text two", {})},
+                    {"content_hash": content_hash("changed text", {})},
+                ],
+                idempotent=True,
+            )
+
+        # Nothing from the aborted batch made it in: still just the one pre-existing record.
+        assert collection.count() == 1
+        assert collection.get(ids=["chunk_novel_1", "chunk_novel_2"])["ids"] == []
 
     def test_model_mismatch_rejected(self, tmp_path: Path) -> None:
         config = _config(tmp_path)

@@ -152,15 +152,46 @@ class TestIdempotency:
         assert ingestion["inserted_ids"] == []
         assert len(ingestion["existing_identical_ids"]) == 5
 
-    def test_rerun_with_different_chunk_run_id_is_still_idempotent(self, tmp_path: Path) -> None:
-        """A document re-chunked from scratch (e.g. re-uploaded through the chatbot after
-        already being indexed via the CLI) gets a brand new chunker ``run_id``, and is parsed
-        from whatever filename it happens to be staged under this time (e.g. a chatbot upload's
-        generated storage name vs. the original filename used to build the corpus via the CLI)
-        -- even when every chunk's actual text is byte-identical to what's already indexed. That
-        must still be treated as identical content, not a conflicting duplicate -- regression
-        test for a bug where chunk_run_id and source_filename leaked into the content-hash
-        computation and made every re-ingestion of unchanged content look like a hard conflict."""
+    def test_rerun_with_different_chunk_run_id_only_is_still_idempotent(self, tmp_path: Path) -> None:
+        """Identical text, identical filename, only the chunker's ``run_id`` differs between
+        reruns (the normal case: every chunker run gets a fresh timestamp-based run_id even when
+        nothing about the source content changed). Regression test for chunk_run_id leaking into
+        the content-hash computation."""
+        run_dir_a = _write_chunk_run(tmp_path, run_id="20260101T000000Z-deadbeef", subdir="run_a")
+        config = _config(tmp_path)
+        run_indexing_pipeline(run_dir_a, config, embedder=FakeEmbeddingService())
+        time.sleep(1.1)  # run directories are timestamp-named at 1s resolution; avoid a collision
+
+        run_dir_b = _write_chunk_run(tmp_path, run_id="20260102T000000Z-c0ffee00", subdir="run_b")
+        result2 = run_indexing_pipeline(run_dir_b, config, embedder=FakeEmbeddingService())
+
+        assert result2.status in ("PASS", "PASS_WITH_WARNINGS")
+        ingestion = json.loads((result2.run_dir / "ingestion_report.json").read_text())
+        assert ingestion["inserted_ids"] == []
+        assert len(ingestion["existing_identical_ids"]) == 5
+
+    def test_rerun_with_different_source_filename_only_is_still_idempotent(self, tmp_path: Path) -> None:
+        """Identical text, identical chunk_run_id, only ``source_filename`` differs (the exact
+        production scenario: a document already indexed via the CLI under its original filename
+        gets re-uploaded through the chatbot, which stages it under a generated storage name).
+        Regression test for source_filename leaking into the content-hash computation."""
+        run_dir_a = _write_chunk_run(tmp_path, subdir="run_a", source_filename="original.pdf")
+        config = _config(tmp_path)
+        run_indexing_pipeline(run_dir_a, config, embedder=FakeEmbeddingService())
+        time.sleep(1.1)  # run directories are timestamp-named at 1s resolution; avoid a collision
+
+        run_dir_b = _write_chunk_run(tmp_path, subdir="run_b", source_filename="a1b2c3d4e5f6.pdf")
+        result2 = run_indexing_pipeline(run_dir_b, config, embedder=FakeEmbeddingService())
+
+        assert result2.status in ("PASS", "PASS_WITH_WARNINGS")
+        ingestion = json.loads((result2.run_dir / "ingestion_report.json").read_text())
+        assert ingestion["inserted_ids"] == []
+        assert len(ingestion["existing_identical_ids"]) == 5
+
+    def test_rerun_with_different_run_id_and_filename_is_still_idempotent(self, tmp_path: Path) -> None:
+        """Both chunk_run_id and source_filename differ at once -- the real production failure
+        this bug was diagnosed from (a chatbot re-upload of a document already indexed via the
+        CLI under a different original filename)."""
         run_dir_a = _write_chunk_run(
             tmp_path, run_id="20260101T000000Z-deadbeef", subdir="run_a", source_filename="original.pdf"
         )
