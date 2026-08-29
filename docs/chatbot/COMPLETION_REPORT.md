@@ -220,3 +220,59 @@ Python jobs), no mutation of real Chroma/BM25, no secrets required.
 Branch `feature/professional-rag-chatbot`, pushed to origin. **Pull
 request opened against `master`, not merged** — see the PR description for
 the exact compare link if `gh` was unavailable at delivery time.
+
+## 16. Post-merge defect (2026-08-29): re-ingesting already-indexed content
+
+The first real document upload after this milestone merged into `master`
+failed three times in a row: `INTERNAL_ERROR` on the first attempt,
+`VECTOR_INDEXING_FAILED` on the next two, all at the `VECTOR_INDEXING`
+stage. Diagnosis, fix and verification are on branch
+`fix/chatbot-reingest-content-hash-idempotency`; full detail is now in
+`docs/chatbot/TROUBLESHOOTING.md` under "A document failed with
+`VECTOR_INDEXING_FAILED` mentioning a content conflict". Summary:
+
+**Root cause.** `content_hash()` — the fast-path check deciding
+"identical content, skip" vs. "different content, refuse to
+overwrite" in `databases/chroma/repository.py::ingest_batch` — hashed
+two fields that are run/upload *provenance*, not chunk *content*:
+`chunk_run_id` (a fresh timestamp every chunker run) and
+`source_filename` (whatever the file was staged/parsed as on disk this
+time — a generated storage name for a chatbot upload, never the
+original filename a document might already be indexed under from a
+prior CLI run). Any re-ingestion of already-indexed, byte-identical
+content therefore always looked like a hard conflict, and
+`DuplicateIdConflictError` had no entry in the API's error-translation
+table, so it surfaced as an opaque `INTERNAL_ERROR`.
+
+**Compatibility behavior.** Correcting the hash formula alone cannot
+repair a corpus indexed before the fix, because its stored hashes were
+computed under the old formula and can never again equal a hash from
+the corrected one — for any document, indefinitely. `ingest_batch` now
+falls back to comparing the actual stored retrieval text when the
+fast-path hash disagrees, before declaring a real conflict. This makes
+the fix retroactively correct against a pre-existing, unmodified corpus
+with no migration, re-embedding, or rebuild of any kind. A batch with a
+genuinely different chunk under the same id still raises
+`DuplicateIdConflictError` and still writes nothing for that batch —
+this path is unchanged and covered by
+`test_conflicting_duplicate_id_rejected` and (new)
+`test_mixed_batch_stays_atomic_on_one_real_conflict`.
+
+**Evidence.** The failing document's own SHA-256 matched an
+already-indexed acceptance PDF (added directly via the CLI pipeline,
+outside the chatbot's registry). All 113 of its chunks were confirmed
+byte-identical, field-by-field, to the 113 already in the corpus. After
+the fix, the same registered document (`b36b90175bb04ec79e4d4a37f558195c`
+— no re-upload) reached `READY` on retry with 113/113 chunks resolving
+as idempotent-identical: the shared corpus grew by **zero** records
+(122 before, 122 after, in both Chroma and BM25), and
+`GET /api/v1/documents/{id}` reported
+`{"chroma_chunk_count": 113, "bm25_chunk_count": 113, "consistent": true}`.
+All four job attempts (three failures, one success) remain in the jobs
+table as preserved evidence. Selected-document retrieval isolation was
+verified bidirectionally with `engrag-retrieve search --filter
+document_id=...` against another, unrelated document already in the
+corpus: a query semantically matching only the other document, scoped
+to this one, returned zero hits from the other document, and vice
+versa; an in-domain query scoped to this document returned correct,
+relevant sections.

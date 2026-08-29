@@ -57,6 +57,72 @@ pre-existing cross-index inconsistency unrelated to this specific upload
 (rebuild BM25 from Chroma to fix — see `docs/chatbot/COMMANDS.md`'s
 "Reset local state" section).
 
+## A document failed with `VECTOR_INDEXING_FAILED` mentioning a content conflict
+
+This means the document's content is already present in the shared
+Chroma/BM25 corpus (e.g. it was previously indexed via the CLI pipeline
+directly, outside the chatbot's own registry) and the fast-path
+`content_hash` comparison couldn't confirm that on its own — usually
+because the stored hash predates a hash-formula change, or because you're
+running a build that still has the underlying bug this section describes.
+`GET /api/v1/system/status` shows the shared corpus's dependency health;
+retry the job (`POST /api/v1/jobs/{id}/retry`) once you've confirmed the
+backend is on a fixed build — a genuine re-ingestion of unchanged content
+resolves as an idempotent no-op, not an error.
+
+**Root cause (fixed 2026-08-29).** `content_hash()` — the check that
+decides "same content, skip" vs. "different content, refuse to
+overwrite" — used to hash two fields that are upload/run *provenance*,
+not chunk *content*:
+
+- `chunk_run_id`, a fresh timestamp generated on every chunker run, even
+  when the actual chunk text never changed;
+- `source_filename`, the name the file happened to be staged/parsed
+  under this run — for a chatbot upload this is a generated storage
+  filename, never the original name a document might have been indexed
+  under previously (e.g. via the CLI pipeline).
+
+Because of this, re-ingesting a document whose content was already
+indexed (by any path) always produced a different hash from what was
+stored, even for byte-identical text — permanently defeating the
+idempotent-skip path and raising `DuplicateIdConflictError`, which had
+no entry in the API's error-translation table and so surfaced as an
+opaque `INTERNAL_ERROR` with no actionable detail.
+
+Fixing the hash formula alone could not repair documents already in an
+existing corpus, because their stored hashes were computed under the old
+formula and could never again equal a hash computed by the corrected
+one. The complete fix has three parts:
+
+1. `chunk_run_id` and `source_filename` are still recorded in each
+   chunk's stored metadata (for provenance and citation display) but are
+   now excluded from what `content_hash()` hashes.
+2. `DuplicateIdConflictError` has a proper `VECTOR_INDEXING_FAILED`
+   translation instead of falling through to `INTERNAL_ERROR`.
+3. `ingest_batch` now falls back to comparing the actual stored
+   retrieval text when the fast-path hash disagrees, before declaring a
+   real conflict — this is what makes already-indexed, pre-fix corpora
+   (including ones built before this fix existed) resolve correctly
+   without any migration or rebuild.
+
+A batch with one genuine conflict (different id, truly different text)
+still raises and still writes nothing for that batch — atomicity is
+unchanged; see `tests/integration/databases/chroma/test_repository_integration.py::TestCollectionLifecycle::test_mixed_batch_stays_atomic_on_one_real_conflict`.
+
+**Evidence.** Diagnosed against a real production incident: a document
+whose SHA-256 matched an already-indexed acceptance PDF failed
+ingestion three times with `INTERNAL_ERROR`/`VECTOR_INDEXING_FAILED`
+before the fix. After the fix, the same registered document (no
+re-upload) reached `READY` on retry with 113/113 chunks resolving as
+idempotent-identical to the existing corpus — the shared 122-chunk
+Chroma/BM25 corpus grew by exactly zero records, and cross-index
+consistency (`chroma_chunk_count`/`bm25_chunk_count`/`missing_from_*`)
+stayed reported as `consistent: true`. Selected-document retrieval
+isolation was verified bidirectionally against another document already
+in the corpus: a query semantically matching only the other document,
+scoped to this one, returned zero results from the other document, and
+vice versa.
+
 ## Upload is rejected
 
 - **"Unsupported file type"** — only `.pdf` is accepted; check the actual

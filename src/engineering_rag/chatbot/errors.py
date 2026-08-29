@@ -186,6 +186,14 @@ _TRANSLATIONS: dict[str, tuple[str, str, bool, int]] = {
         False,
         409,
     ),
+    "DuplicateIdConflictError": (
+        ErrorCode.VECTOR_INDEXING_FAILED,
+        "This document's content conflicts with an already-indexed chunk at the same position. "
+        "The shared index may have been built from a different version of this document; check "
+        "the system status page.",
+        False,
+        409,
+    ),
 }
 
 

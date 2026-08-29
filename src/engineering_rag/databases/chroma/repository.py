@@ -56,17 +56,26 @@ def ingest_batch(
     if not ids:
         return outcome
 
-    existing = collection.get(ids=ids, include=["metadatas"])
+    existing = collection.get(ids=ids, include=["metadatas", "documents"])
     existing_hashes = {
         eid: (emeta or {}).get("content_hash")
         for eid, emeta in zip(existing["ids"], existing["metadatas"] or [], strict=True)
     }
+    existing_documents = dict(zip(existing["ids"], existing["documents"] or [], strict=True))
 
     to_write_idx: list[int] = []
     for i, cid in enumerate(ids):
         if cid in existing_hashes:
             new_hash = metadatas[i].get("content_hash")
             if existing_hashes[cid] == new_hash:
+                outcome.existing_identical_ids.append(cid)
+                continue
+            # The fast-path hash disagrees. Fall back to the actual stored text before
+            # declaring a conflict: a record ingested under an older content_hash formula
+            # (e.g. one that used to fold in a volatile field like a run id or a staging
+            # filename) will legitimately fail this comparison forever even though nothing
+            # about its real content ever changed. Ground truth is the retrieval text itself.
+            if existing_documents.get(cid) == documents[i]:
                 outcome.existing_identical_ids.append(cid)
                 continue
             if idempotent:
