@@ -97,6 +97,37 @@ class TestCollectionLifecycle:
         assert outcome.existing_identical_ids == ["chunk_x"]
         assert outcome.inserted_ids == []
 
+    def test_stale_hash_formula_falls_back_to_real_text_comparison(self, tmp_path: Path) -> None:
+        """A record already in the collection may carry a content_hash computed under an
+        older hashing formula (e.g. one that used to fold in a volatile field, since fixed).
+        Its stored hash will then never again match a hash computed by the current formula,
+        even though the actual retrieval text never changed. That must still resolve as
+        idempotent-identical via a real text comparison, not a false conflict."""
+        config = _config(tmp_path)
+        identity = _identity()
+        client = get_client(config.persistence_path)
+        collection = open_or_create_collection(client, config, identity)
+
+        ingest_batch(
+            collection,
+            ids=["chunk_z"],
+            embeddings=[_vector(3)],
+            documents=["unchanged text"],
+            metadatas=[{"content_hash": "stale-hash-from-an-old-formula"}],
+            idempotent=True,
+        )
+        outcome = ingest_batch(
+            collection,
+            ids=["chunk_z"],
+            embeddings=[_vector(3)],
+            documents=["unchanged text"],
+            metadatas=[{"content_hash": content_hash("unchanged text", {})}],
+            idempotent=True,
+        )
+        assert outcome.existing_identical_ids == ["chunk_z"]
+        assert outcome.inserted_ids == []
+        assert outcome.final_count == 1
+
     def test_conflicting_duplicate_id_rejected(self, tmp_path: Path) -> None:
         config = _config(tmp_path)
         identity = _identity()
