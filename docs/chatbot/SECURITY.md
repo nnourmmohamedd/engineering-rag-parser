@@ -112,19 +112,28 @@ the client.
 ## Known limitations (stated honestly)
 
 - **No authentication.** By design for this milestone; see above.
-- **Citation source-availability can alias by content.** Availability is
-  computed by checking whether the citation's source SHA-256 still belongs
-  to *any* non-deleted document row. If the same file was uploaded twice
-  (e.g. once as a failed attempt, once successfully) and only one copy is
-  deleted, a citation from the deleted copy can still show
-  `source_available: true` as long as another row with identical content
-  remains in any non-deleted state. This was observed during real
-  acceptance testing (see `COMPLETION_REPORT.md`) and is a real, if
-  narrow, edge case — the primary case (delete the only document with
-  that content) is correct and covered by tests. A complete fix would
-  require citations to carry the specific ingesting document's registry
-  id, not just the pipeline's content-addressed SHA-256; out of scope for
-  this milestone.
+- **Citation source-availability can alias by content, deliberately and
+  safely.** Availability (and, since the citation-navigation milestone,
+  `source_document_id` for opening the PDF) is computed by resolving the
+  citation's source SHA-256 to one non-deleted document row, preferring a
+  `READY` one (`chatbot/app.py::_build_citation_source_index`). If the
+  same file was uploaded twice (e.g. once as a failed attempt, once
+  successfully) and only one copy is deleted, a citation from the deleted
+  copy can still resolve to the surviving copy and show
+  `source_available: true`. This was observed during real acceptance
+  testing (see `COMPLETION_REPORT.md`) and remains true today — but is no
+  longer a meaningfully exploitable gap: SHA-256 identity means the
+  surviving copy's PDF bytes are provably identical to the deleted one's,
+  so the citation viewer opens exactly the same content either way; the
+  only externally visible effect is that the citation isn't flagged
+  "source deleted" purely because *a* specific upload row was removed
+  while byte-identical content remains available elsewhere. Flagging it
+  unavailable regardless would require citations to carry the specific
+  ingesting document's registry id instead of the pipeline's
+  content-addressed SHA-256, which would also require every downstream
+  consumer (retrieval selection, delete/rollback) to stop relying on the
+  content-addressed identity that Chroma/BM25 themselves use — out of
+  scope for this milestone.
 - **The refusal message is model-dependent.** When the LLM itself
   determines a question has insufficient evidence (rather than retrieval
   returning zero candidates), the shown message is whatever the model

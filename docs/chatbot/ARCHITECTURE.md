@@ -66,6 +66,48 @@ flowchart TD
     G -->|FAIL / insufficient evidence| REFUSAL[safe refusal, persisted, no fabricated sources]
 ```
 
+## Exact citation navigation
+
+A citation carries enough to jump straight to, and where possible highlight,
+the exact passage it cites — never fabricated:
+
+```
+Docling conversion (bbox per element, PDF points, bottom-left origin)
+        |
+services/chunker  ProvenanceRecord{page_no, bbox} attached per chunk
+        |  bbox_reliable = False if the chunk was recursively split or
+        |  merged (its bbox would then cover the whole original element,
+        |  not the specific sub-passage) -- see ids.py's chunk_id doc.
+pipelines/indexing_pipeline._build_metadata  persists provenance + bbox_reliable
+        |  (previously silently dropped here -- see COMPLETION_REPORT.md)
+services/retriever.RetrievalHit.provenance/bbox_reliable
+        |
+services/context_builder.SelectedSource.provenance/bbox_reliable
+        |
+services/answerer.CitationSummary.provenance/bbox_reliable/supporting_quote
+        |  supporting_quote populated ONLY when services/grounding's
+        |  validator confirmed it present (after normalization) in the
+        |  chunk's own text -- never an unverified quote.
+chatbot/schemas.CitationInfo  (+ source_document_id, resolved live from
+        |                      the citation's sha256 via the registry)
+apps/rag-chatbot's PdfSourceViewer
+        |  highlight priority: verified bbox (bbox_reliable) -> PDF.js
+        |  text-layer match of supporting_quote -> honest "highlight
+        |  unavailable" notice with the quotation still shown.
+```
+
+`GET /documents/{document_id}/source` serves the exact registered PDF a
+citation's `source_document_id` points to (see `docs/chatbot/API.md`).
+`apps/rag-chatbot/src/lib/citation-highlight.ts` holds the pure bbox/text-
+layer math (unit-tested independent of PDF.js); `src/components/viewer/
+pdf-source-viewer.tsx` is the PDF.js-backed modal viewer, mounted once via
+`CitationViewerProvider` so opening it never unmounts the conversation.
+
+A chunk already indexed before this feature existed carries no
+`provenance` metadata (`bbox_reliable: false`) — the shared corpus's
+pre-existing chunks fall back to the text-layer match, same as any
+genuinely scanned/image-only page.
+
 ## Document identity: a deliberate two-id design
 
 This is the single most important design fact in this codebase, and the

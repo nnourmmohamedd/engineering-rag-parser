@@ -55,11 +55,44 @@ files. Nothing is sent to a third-party API.
    generation → grounding validation) — the answer only appears once it
    has passed grounding.
 5. Every claim in the answer is followed by a bracketed marker like
-   `[S1]`. Click it to open that citation: source filename, page number,
-   section heading, chunk id, and the exact supporting quote the model
-   was validated against.
+   `[S1]`. Click it — or click the matching source card below the
+   answer — to open the source viewer: the exact page, jumped to
+   automatically, with the supporting passage highlighted whenever the
+   parser's coordinates or a text match make that possible (see "Opening
+   a citation's source" below). The card itself also shows the source
+   filename, page number, section heading, chunk id, and the exact
+   supporting quote the model was validated against.
 6. If the selected documents don't contain enough evidence, you get an
    explicit refusal — never a fabricated or unsupported answer.
+7. A claim needing more than one supporting passage carries more than
+   one marker (e.g. `[S1][S2]`) — the answer only cites as many passages
+   as a claim genuinely needs, never padded for appearance, and never
+   fewer than it needs: an answer with an uncited claim fails grounding
+   validation and is refused rather than shown.
+
+## Opening a citation's source
+
+Click any `[S<n>]` marker in the answer, or a source card's **Open
+source** button, to open the PDF viewer:
+
+- It jumps straight to the cited page in the original PDF.
+- When the parser recorded exact coordinates for that passage, they're
+  highlighted directly. Otherwise, the viewer finds the model's
+  quoted text in the page itself and highlights that. For a genuinely
+  scanned or image-only page where neither is possible, the page still
+  opens and the verified quotation is shown alongside it with an honest
+  note that an exact visual highlight isn't available — the location and
+  quote are never guessed.
+- If more than one citation supports the current answer, use the
+  prev/next controls in the viewer's header to step through all of them
+  without closing the viewer.
+- Zoom and page-navigation controls, and an **Open source** link to the
+  raw PDF, are always available. Escape closes the viewer and returns
+  you to exactly where you were in the conversation — nothing about your
+  question, the answer, or your scroll position is lost.
+- If a cited document has since been deleted, the viewer says so plainly
+  and still shows the preserved quotation — the citation itself is never
+  rewritten (see "Deleting a document" below).
 
 ## Document detail
 
@@ -109,3 +142,20 @@ something looks wrong here.
   `docs/chatbot/COMPLETION_REPORT.md` — treat answers as a strong starting
   point for verification against the cited source, not a substitute for
   reading it.
+- **Exact highlighting isn't always possible.** A scanned or image-only
+  page has no selectable text layer, so neither a parser-recorded
+  coordinate nor a text match can locate the passage on the page image
+  itself — the viewer still jumps to the correct page and shows the
+  verified quotation, with an honest notice rather than a guessed
+  highlight. A chunk produced by splitting an oversized passage or
+  merging two adjacent ones is also never highlighted with false
+  precision: its recorded coordinates (if any) cover the whole original
+  passage, not the specific cited sentence, so the viewer falls back to
+  the text match instead of drawing a box that's technically present but
+  wrong.
+- **Documents indexed before this feature existed** (including this
+  application's own original demonstration corpus) have no stored
+  coordinate data at all — every citation into them uses the text-match
+  highlight, never a coordinate one. This is expected, not a bug: nothing
+  about their previously-indexed content was rebuilt or touched to add
+  this feature.

@@ -12,12 +12,19 @@
 | Retriever `$in` filter | `tests/unit/services/retriever/test_filters.py` (added cases) | 7 | List → `$in`, tuple, single-element collapse, dedup, empty-list rejection |
 | Document isolation (retriever layer) | `tests/unit/services/retriever/test_document_isolation.py` | 11 | Adversarial proof: unselected-document text never leaks via Chroma or BM25; filtering happens **before** top-k truncation |
 | Architecture boundary | `tests/unit/test_architecture.py` (added cases) | 2 | Lower tiers never import `chatbot`; `chatbot` calls pipelines, not service internals |
+| Bbox provenance persistence | `tests/unit/pipelines/test_indexing_pipeline.py::TestProvenance` | 5 | Provenance + `bbox_reliable` survive indexing (previously silently dropped); recursively-split and merged chunks are never marked reliable; a missing bbox is never reliable; no-provenance omits the field entirely |
+| Citation completeness gate | `tests/unit/services/grounding/test_validator.py::TestCitationCompleteness` | 3 | One claim/one citation is complete; a high citation count elsewhere never offsets one uncited claim; the gate is disableable for the pre-existing soft-warning mode |
+| PDF source route | `tests/integration/chatbot/test_api.py::TestDocumentSource` | 7 | Correct content-type/bytes; `Range` requests (206 Partial Content); unknown/path-shaped ids never reach the filesystem; deleted/missing-file/no-source-path all 404 safely; unsafe filename characters never reach `Content-Disposition` unsanitized |
 
-**Total chatbot-specific: 160 tests** (92 unit + 68 integration), all part
-of the fast suite (`pytest -m "not slow"`) — none require a real model,
-real Ollama, or the real corpus. Every heavy collaborator (parser,
+**Total chatbot-specific: 170 tests** (95 unit + 75 integration, the
+`tests/unit/chatbot`/`tests/integration/chatbot` directories exactly),
+all part of the fast suite (`pytest -m "not slow"`) — none require a real
+model, real Ollama, or the real corpus. Every heavy collaborator (parser,
 chunker, indexer, BM25 builder, Chroma collection, LLM client) is
-injectable and faked.
+injectable and faked. The provenance-persistence (5) and
+citation-completeness (3) rows above live in the shared indexing/grounding
+test files (not the `chatbot` directories) and are additional to this
+total, same convention as the retriever-filter/isolation/architecture rows.
 
 Run:
 
@@ -70,30 +77,53 @@ This is not an automated CI gate — it requires a running Ollama server and
 mutates the real corpus during the run — but it is the evidence that the
 plumbing genuinely works end-to-end, not just against fakes.
 
+**Citation-navigation acceptance run** (`docs/chatbot/COMPLETION_REPORT.md`
+§17): against the real, unmodified 122-chunk corpus and the real
+`Instrumentation-and-Control-Engineering (1).pdf` — never re-ingested,
+never rebuilt — a single-page question and a genuinely multi-page,
+multi-citation question were both asked through the real running frontend
+with real qwen3:4b generation. Every citation opened the correct real
+page; the text-layer highlight correctly located the exact quoted
+sentence on a real rendered page. Corpus fingerprint confirmed unchanged
+before and after.
+
 ## Frontend
 
-**Unit/component (Vitest + Testing Library): 69 tests, 10 files.** Covers
+**Unit/component (Vitest + Testing Library): 98 tests, 13 files.** Covers
 the API client, formatting utilities, citation rendering, message XSS
-sanitization (`<img onerror>`, `<script>` payloads are neutralized —
+sanitization (`<img onerror>`, `<script>` payloads, and a `javascript:`
+URL disguised as a markdown link are all neutralized —
 `react-markdown` + `rehype-sanitize`, raw HTML disabled), document
 selector (including the `useId()`-namespaced desktop/mobile dual mount),
 upload dropzone validation, document row actions, status badges, SSE
 event hook (a custom `MockEventSource`), and the documents page's
 filter/search/empty states.
 
+Citation-navigation-specific (29 of the 98, added with this feature):
+`src/lib/citation-highlight.test.ts` (13) — the pure bbox->viewport and
+quote->text-layer-rect math, including that a corner-order-reversed bbox
+never produces a negative width/height and that a genuinely absent quote
+returns `null` rather than a fabricated match; `src/components/viewer/
+pdf-source-viewer.test.tsx` (8) — the viewer's non-rendering states
+(source unavailable, load error, citation nav enable/disable, keyboard
+Escape/Arrow navigation, header content) without needing a real PDF.js
+render; plus new cases in `citation-card.test.tsx` and
+`message-bubble.test.tsx` for "Open source" gating (unavailable source /
+no resolved registry id) and inline `[S<n>]` marker click-through vs. an
+unknown marker id being left inert.
+
 ```powershell
 cd apps\rag-chatbot
 npm test
 ```
 
-**End-to-end (Playwright): 15 tests × 2 projects (chromium desktop,
-mobile — Pixel 7 with real touch emulation) = 30 browser runs, all
-passing.** Runs against a controlled test backend
-(`e2e/fixtures/test_backend.py`) that uses the **real** orchestrator,
-worker, and state machine — only Docling conversion, BGE embedding, the
-reranker, and Ollama generation are faked (deterministic canned
-responses), so the E2E suite genuinely exercises this application's own
-logic, not a fully mocked stand-in.
+**End-to-end (Playwright): 26 tests × 2 projects (chromium desktop,
+mobile — Pixel 7 with real touch emulation) = 52 browser runs.** Runs
+against a controlled test backend (`e2e/fixtures/test_backend.py`) that
+uses the **real** orchestrator, worker, and state machine — only Docling
+conversion, BGE embedding, the reranker, and Ollama generation are faked
+(deterministic canned responses), so the E2E suite genuinely exercises
+this application's own logic, not a fully mocked stand-in.
 
 Covers: document lifecycle (upload → real, observable stage transitions →
 `READY`; detail view chunk counts/timings; sanitized Markdown preview;
@@ -105,6 +135,26 @@ network request — the exact set of checked document ids is what's sent,
 and an empty selection fires no request at all); responsive/mobile layout
 (navigation drawer, table containment, the document-selection drawer, all
 four retrieval modes reachable on a 390px viewport).
+
+**Exact citation navigation (`e2e/citation-navigation.spec.ts`, 11 of the
+26 — new with this feature), against a real, structurally valid 2-page
+PDF fixture (`sample-real.pdf`, reportlab-generated; PDF.js can actually
+open and render it, unlike the pre-existing signature-only
+`sample.pdf`):** citation card and inline `[S<n>]` marker click-through
+both open the same viewer; header shows filename/page/section/chunk id;
+the verified quotation is always shown (via the fake backend's
+`bbox_reliable: false`, exercising the text-layer-match path); page
+navigation and zoom controls; "Open source" links to the real
+`GET .../source` route; a two-citation answer's prev/next controls cycle
+between citations on genuinely different pages; closing the viewer
+preserves the conversation underneath it (content still visible, no
+navigation occurred); keyboard accessibility (Escape closes, Tab reaches
+controls); a document deleted via a direct API call resolves
+`source_available: false`/`source_document_id: null` live through
+`GET /conversations/{id}`, quote/page preserved; mobile viewport. All
+52 browser runs green in the full suite (2 pre-existing-flaky tests in
+the unrelated `document-lifecycle.spec.ts` mobile project, confirmed
+passing in isolation — not caused by this feature).
 
 ```powershell
 cd apps\rag-chatbot

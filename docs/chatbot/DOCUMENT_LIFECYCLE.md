@@ -106,10 +106,13 @@ mutation of "what's live").
    (`delete_document_records`, scoped by the document's source SHA-256)
    and rebuilds BM25 from the resulting Chroma state.
 3. Historical conversation messages that cited this document are **never
-   rewritten** — their citation metadata (quote, page, section) stays
-   exactly as the user saw it. Only `source_available` (recomputed on
-   every read) flips to `false`, so the UI can flag "this source was
-   removed" without falsifying what was actually cited at the time.
+   rewritten** — their citation metadata (quote, page, section, bbox
+   provenance) stays exactly as the user saw it. Only `source_available`
+   and `source_document_id` (both recomputed on every read, see
+   `docs/chatbot/API.md`'s "Citation availability after deletion") flip to
+   `false`/`null`, so the UI can flag "this source was removed" — and the
+   PDF viewer refuses to offer opening it — without falsifying what was
+   actually cited at the time.
 4. A deleted document cannot be selected for a new question
    (`resolve_selection` treats `is_deleted` the same as "unknown
    document").
