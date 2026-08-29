@@ -14,6 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from engineering_rag.services.retriever.models import ProvenanceEntry
+
 __all__ = [
     "CONTEXT_SCHEMA_VERSION",
     "ContextPackage",
@@ -71,6 +73,8 @@ class NeighborChunk(_Model):
     chunk_index: int | None = None
     previous_chunk_id: str | None = None
     next_chunk_id: str | None = None
+    provenance: list[ProvenanceEntry] = Field(default_factory=list)
+    bbox_reliable: bool = False
 
 
 class SelectedSource(_Model):
@@ -92,6 +96,8 @@ class SelectedSource(_Model):
     content_hash: str | None = None
     previous_chunk_id: str | None = None
     next_chunk_id: str | None = None
+    provenance: list[ProvenanceEntry] = Field(default_factory=list)
+    bbox_reliable: bool = False
 
     # --- retrieval evidence (whatever the active retrieval mode populated) ---
     vector_rank: int | None = None

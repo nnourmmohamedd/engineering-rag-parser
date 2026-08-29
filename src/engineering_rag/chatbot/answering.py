@@ -194,6 +194,12 @@ class GroundedAnsweringService:
                 http_status=400,
             )
 
+        # A wider candidate pool than what will ultimately be cited: context_builder's own
+        # diversity/dedup/token-budget selection (services/context_builder/builder.py) needs
+        # real material to choose comprehensive, multi-page evidence from. An explicit top_k
+        # from the caller always wins.
+        effective_top_k = top_k if top_k is not None else self._config.default_retrieval_candidate_depth
+
         selected = resolve_selection(self._registry, document_ids)
         # The selection boundary: a real query-time filter, applied by Chroma
         # (native $in) and by BM25 before truncation -- not a post-hoc slice.
@@ -215,7 +221,7 @@ class GroundedAnsweringService:
                 query,
                 retrieval_mode=retrieval_mode,
                 metadata_filters=metadata_filters,
-                top_k=top_k,
+                top_k=effective_top_k,
             )
         except Exception as exc:  # noqa: BLE001 - surfaced as a safe outcome, never a traceback
             translated = translate_exception(exc)
@@ -265,6 +271,11 @@ class GroundedAnsweringService:
                 "section_title": getattr(c, "section_title", None),
                 "supporting_quote": getattr(c, "supporting_quote", None),
                 "content_hash": getattr(c, "content_hash", None),
+                "provenance": [
+                    {"page_no": p.page_no, "bbox": list(p.bbox) if p.bbox else None}
+                    for p in getattr(c, "provenance", []) or []
+                ],
+                "bbox_reliable": bool(getattr(c, "bbox_reliable", False)),
             }
             for c in getattr(answer, "citations", []) or []
         ]

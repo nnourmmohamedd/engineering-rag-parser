@@ -232,6 +232,9 @@ class TestStatusLevels:
         assert report.status == "PASS"
 
     def test_pass_with_warnings_when_only_soft_signal_present(self) -> None:
+        """The coverage-ratio *warning* fires below citation_coverage_warn_below independently
+        of the hard uncited-claim gate -- disabled here to isolate the warning path itself
+        (see TestCitationCompleteness for the hard-gate behavior, on by default)."""
         context = _package(_source("S1", "one two three four five six seven eight nine ten"))
         long_text = "x" * 60  # qualifies as a technical-length sentence but carries no citation
         report = validate_grounding(
@@ -240,7 +243,7 @@ class TestStatusLevels:
             citations_used=["S1"],
             supporting_evidence=[("S1", "one two three four five six seven eight nine ten")],
             context=context,
-            config=GroundingConfig(citation_coverage_warn_below=0.99),
+            config=GroundingConfig(citation_coverage_warn_below=0.99, fail_on_uncited_claim=False),
         )
         assert report.status == "PASS_WITH_WARNINGS"
 
@@ -255,3 +258,65 @@ class TestStatusLevels:
             config=GroundingConfig(),
         )
         assert report.status == "FAIL"
+
+
+class TestCitationCompleteness:
+    """The claim-level coverage gate: every citation-qualifying sentence must carry a
+    citation, independent of the answer's total citation count."""
+
+    def test_single_claim_single_citation_is_complete(self) -> None:
+        """One passage genuinely is sufficient when the whole answer is that one claim."""
+        context = _package(_source("S1", "The mandate of C&I engineering is safety and reliability."))
+        report = validate_grounding(
+            answer="The mandate of C&I engineering is safety and reliability [S1].",
+            insufficient_evidence=False,
+            citations_used=["S1"],
+            supporting_evidence=[("S1", "The mandate of C&I engineering is safety and reliability")],
+            context=context,
+            config=GroundingConfig(),
+        )
+        assert report.status == "PASS"
+        assert report.uncited_claims == []
+        assert "uncited_factual_claim" not in report.checks_failed
+
+    def test_high_citation_count_does_not_offset_one_uncited_claim(self) -> None:
+        """Citation count alone is never completeness: 3 citations elsewhere in the answer
+        must not paper over one specific sentence that has none."""
+        context = _package(
+            _source("S1", "one two three four five six seven eight nine ten"),
+            _source("S2", "eleven twelve thirteen fourteen fifteen sixteen seventeen"),
+            _source("S3", "eighteen nineteen twenty twentyone twentytwo twentythree"),
+        )
+        uncited = "y" * 60  # qualifies (length >= 40) but carries no [S<n>] marker
+        report = validate_grounding(
+            answer=(
+                f"First claim, cited [S1]. Second claim, cited [S2]. Third claim also cited [S3]. {uncited}."
+            ),
+            insufficient_evidence=False,
+            citations_used=["S1", "S2", "S3"],
+            supporting_evidence=[
+                ("S1", "one two three four five six seven eight nine ten"),
+                ("S2", "eleven twelve thirteen fourteen fifteen sixteen seventeen"),
+                ("S3", "eighteen nineteen twenty twentyone twentytwo twentythree"),
+            ],
+            context=context,
+            config=GroundingConfig(),
+        )
+        assert report.status == "FAIL"
+        assert "uncited_factual_claim" in report.checks_failed
+        assert report.uncited_claims == [f"{uncited}."]
+
+    def test_gate_disableable_for_backward_compatible_soft_mode(self) -> None:
+        context = _package(_source("S1", "cited text"))
+        uncited = "z" * 60
+        report = validate_grounding(
+            answer=f"Cited claim [S1]. {uncited}.",
+            insufficient_evidence=False,
+            citations_used=["S1"],
+            supporting_evidence=[("S1", "cited text")],
+            context=context,
+            config=GroundingConfig(fail_on_uncited_claim=False),
+        )
+        assert report.status == "PASS_WITH_WARNINGS"
+        assert report.uncited_claims == [f"{uncited}."]
+        assert "uncited_factual_claim" not in report.checks_failed

@@ -7,12 +7,17 @@ Deliberately does not import :mod:`engineering_rag.services.answerer` --
 ``services/answerer`` depends on ``services/grounding``, never the reverse.
 
 These checks confirm citation structure (every citation used is one of the
-real, allow-listed IDs handed to the model) and extractive evidence presence
+real, allow-listed IDs handed to the model), extractive evidence presence
 (a supporting quote actually occurs in its cited source, after documented
-normalization). They do **not** mathematically prove that the answer's claim
-is semantically entailed by the quote, and a ``PASS`` result is never
-"proof of no hallucination" -- see
-``docs/answering/SECURITY_AND_GROUNDING.md``.
+normalization), and citation *completeness* (every citation-qualifying
+sentence carries at least one citation -- claim-level, never satisfied by a
+high citation count elsewhere in the same answer). They do **not**
+mathematically prove that the answer's claim is semantically entailed by the
+quote, and a ``PASS`` result is never "proof of no hallucination" -- see
+``docs/answering/SECURITY_AND_GROUNDING.md``. Completeness here means "no
+claim was left uncited," not "the retrieved evidence covers every aspect of
+a multi-part question" -- that broader semantic-sufficiency judgment is out
+of scope for an automatic, deterministic check.
 """
 
 from __future__ import annotations
@@ -171,10 +176,12 @@ def validate_grounding(
                 checks_passed.append("every_citation_has_a_quote")
 
     coverage_ratio: float | None = None
+    uncited_claims: list[str] = []
     if not insufficient_evidence:
         qualifying = _qualifying_sentences(answer)
         if qualifying:
-            with_citation = sum(1 for s in qualifying if _INLINE_CITATION_RE.search(s))
+            uncited_claims = [s for s in qualifying if not _INLINE_CITATION_RE.search(s)]
+            with_citation = len(qualifying) - len(uncited_claims)
             coverage_ratio = with_citation / len(qualifying)
             if coverage_ratio < config.citation_coverage_warn_below:
                 warnings.append(
@@ -182,6 +189,14 @@ def validate_grounding(
                     f"{config.citation_coverage_warn_below:.2f} ({with_citation}/{len(qualifying)} "
                     "qualifying sentences carry an inline citation)"
                 )
+            # Claim-level, not aggregate: a claim with zero citations fails here regardless of
+            # how many citations the rest of the answer carries -- "one passage is sufficient"
+            # when every claim (however few) is cited; it is "incomplete" only when some
+            # specific claim has none, never because the total citation count is small.
+            if config.fail_on_uncited_claim and uncited_claims:
+                checks_failed.append("uncited_factual_claim")
+            elif qualifying:
+                checks_passed.append("every_claim_has_a_citation")
 
     status: GroundingStatus = "FAIL" if checks_failed else ("PASS_WITH_WARNINGS" if warnings else "PASS")
 
@@ -192,6 +207,7 @@ def validate_grounding(
         unknown_citations=unknown_citations,
         duplicate_citations=duplicate_citations,
         citation_coverage_ratio=coverage_ratio,
+        uncited_claims=uncited_claims,
         checks_passed=checks_passed,
         checks_failed=checks_failed,
         warnings=warnings,

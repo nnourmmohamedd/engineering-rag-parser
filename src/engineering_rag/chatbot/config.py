@@ -116,6 +116,17 @@ class ChatbotConfig(_Frozen):
         default="vector",
         description="Matches the answering profile's production default; the UI may override per query.",
     )
+    default_retrieval_candidate_depth: int = Field(
+        default=20,
+        ge=1,
+        le=50,
+        description="How many candidates to retrieve when the caller doesn't specify top_k, before "
+        "context_builder's diversity/dedup/token-budget selection narrows them down. Deliberately "
+        "larger than the retrieval profile's own search.default_top_k (5): a broad or multi-part "
+        "question needs a real candidate pool to select comprehensive, multi-page evidence from -- "
+        "retrieving only as many candidates as will ultimately be cited leaves nothing for "
+        "context_builder to choose between. Capped by the retrieval profile's search.maximum_top_k.",
+    )
     log_level: str = Field(default="INFO")
 
 
@@ -149,6 +160,8 @@ def load_chatbot_config() -> ChatbotConfig:
         top_level["answering_profile"] = Path(profile)
     if profile := os.environ.get("ENGRAG_CHATBOT_RETRIEVAL_PROFILE"):
         top_level["retrieval_profile"] = Path(profile)
+    if depth := os.environ.get("ENGRAG_CHATBOT_RETRIEVAL_CANDIDATE_DEPTH"):
+        top_level["default_retrieval_candidate_depth"] = int(depth)
 
     return ChatbotConfig(
         storage=StorageConfig(**storage_kwargs),

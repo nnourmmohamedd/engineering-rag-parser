@@ -44,3 +44,20 @@ class MockEventSource {
 window.EventSource = MockEventSource;
 // @ts-expect-error -- exposed for tests to reach the latest instance
 window.__MockEventSource = MockEventSource;
+
+// jsdom has no DOMMatrix; pdfjs-dist's canvas backend references it at module-load time
+// (feature detection), even in tests that never actually render a PDF page. A minimal
+// stand-in is enough -- component tests mock `fetch` to fail before any real PDF loads,
+// so this is never asked to do real matrix math.
+if (!window.DOMMatrix) {
+  class MockDOMMatrix {
+    a = 1;
+    b = 0;
+    c = 0;
+    d = 1;
+    e = 0;
+    f = 0;
+  }
+  // @ts-expect-error -- test-only global stand-in, not a full DOMMatrix implementation
+  window.DOMMatrix = MockDOMMatrix;
+}

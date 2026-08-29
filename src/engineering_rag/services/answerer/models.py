@@ -14,6 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from engineering_rag.services.grounding import GroundingReport
+from engineering_rag.services.retriever.models import ProvenanceEntry
 
 __all__ = [
     "ANSWER_SCHEMA_VERSION",
@@ -71,6 +72,18 @@ class CitationSummary(_Model):
     bm25_rank: int | None = None
     reranker_rank: int | None = None
     similarity_score: float | None = None
+    supporting_quote: str | None = Field(
+        default=None,
+        description="The model's declared quote for this citation, ONLY when the grounding "
+        "validator confirmed it is actually present (after normalization) in the cited source's "
+        "own text -- never an unverified or mismatched quote.",
+    )
+    provenance: list[ProvenanceEntry] = Field(default_factory=list)
+    bbox_reliable: bool = Field(
+        default=False,
+        description="True only when provenance's bbox denotes this exact chunk's own text -- see "
+        "ProvenanceEntry/RetrievalHit.bbox_reliable for the full definition.",
+    )
 
 
 class AnswerResponse(_Model):

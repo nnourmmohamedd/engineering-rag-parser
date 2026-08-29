@@ -375,6 +375,104 @@ class TestDocumentEndpoints:
             assert client.get(f"{API_PREFIX}/documents/d1").status_code == 404
 
 
+class TestDocumentSource:
+    """The read-only PDF-serving route the citation viewer opens."""
+
+    def test_serves_the_registered_pdf_with_the_correct_content_type(self, env, tmp_path: Path) -> None:
+        client, registry, *_ = env
+        pdf_path = tmp_path / "stored.pdf"
+        pdf_path.write_bytes(MINIMAL_PDF)
+        _ready_document(registry, "d1", source_path=str(pdf_path))
+
+        response = client.get(f"{API_PREFIX}/documents/d1/source")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/pdf"
+        assert response.content == MINIMAL_PDF
+
+    def test_range_requests_are_honored(self, env, tmp_path: Path) -> None:
+        """PDF.js fetches pages via byte ranges; Starlette's FileResponse handles this
+        natively, but the behavior is load-bearing for the viewer so it's pinned here."""
+        client, registry, *_ = env
+        content = b"0123456789" * 100
+        pdf_path = tmp_path / "stored.pdf"
+        pdf_path.write_bytes(content)
+        _ready_document(registry, "d1", source_path=str(pdf_path))
+
+        response = client.get(f"{API_PREFIX}/documents/d1/source", headers={"Range": "bytes=0-9"})
+        assert response.status_code == 206
+        assert response.headers["content-range"] == f"bytes 0-9/{len(content)}"
+        assert response.content == content[:10]
+
+    def test_unknown_document_id_is_a_safe_404_not_a_path_traversal(self, env) -> None:
+        """document_id is looked up against the registry before any filesystem access, so a
+        path-shaped id can never reach the filesystem. A multi-segment attempt (containing a
+        literal or percent-encoded ``/``) never even matches the single-segment
+        ``{document_id}`` route -- FastAPI/Starlette itself 404s it before any application
+        code runs; a single-segment id that just doesn't exist gets our own typed 404."""
+        client, *_ = env
+        for attempt in ("../../etc/passwd", "..%2F..%2Fetc%2Fpasswd", "d1/../../secrets"):
+            response = client.get(f"{API_PREFIX}/documents/{attempt}/source")
+            assert response.status_code == 404
+            assert "traceback" not in response.text.lower()
+            assert str(Path.cwd()) not in response.text
+
+        response = client.get(f"{API_PREFIX}/documents/nope/source")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == ErrorCode.DOCUMENT_NOT_FOUND
+
+    def test_deleted_document_source_is_a_safe_404(self, env) -> None:
+        client, registry, *_ = env
+        from engineering_rag.chatbot.models import utc_now
+
+        _ready_document(registry, "d1")
+        registry.update_document("d1", deleted_at=utc_now(), status=DocumentStatus.DELETED)
+
+        response = client.get(f"{API_PREFIX}/documents/d1/source")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == ErrorCode.DOCUMENT_NOT_FOUND
+
+    def test_missing_source_file_on_disk_is_a_safe_404_not_a_crash(self, env, tmp_path: Path) -> None:
+        client, registry, *_ = env
+        _ready_document(registry, "d1", source_path=str(tmp_path / "never-written.pdf"))
+
+        response = client.get(f"{API_PREFIX}/documents/d1/source")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == ErrorCode.DOCUMENT_NOT_FOUND
+        assert str(tmp_path) not in response.text
+
+    def test_document_with_no_source_path_is_a_safe_404(self, env) -> None:
+        client, registry, *_ = env
+        _ready_document(registry, "d1", source_path=None)
+
+        response = client.get(f"{API_PREFIX}/documents/d1/source")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == ErrorCode.DOCUMENT_NOT_FOUND
+
+    def test_unsafe_filename_characters_are_sanitized_in_content_disposition(
+        self, env, tmp_path: Path
+    ) -> None:
+        """A malicious or accidental display_name (quotes, CRLF, path separators) must never
+        reach the Content-Disposition header unsanitized -- header-injection defense."""
+        client, registry, *_ = env
+        pdf_path = tmp_path / "stored.pdf"
+        pdf_path.write_bytes(MINIMAL_PDF)
+        unsafe_name = 'evil".pdf\r\nX-Injected: yes\r\n\r\n../../etc/passwd'
+        _ready_document(registry, "d1", source_path=str(pdf_path), display_name=unsafe_name)
+
+        response = client.get(f"{API_PREFIX}/documents/d1/source")
+        assert response.status_code == 200
+        disposition = response.headers["content-disposition"]
+        assert "\r" not in disposition
+        assert "\n" not in disposition
+        # The real security property: no second header was smuggled in via CRLF injection --
+        # the sanitizer already stripped CR/LF, so "X-Injected"/".." surviving as harmless
+        # literal text *inside* the one filename value is fine (it is only ever a suggested
+        # download name; the byte content actually served always comes from the registry's
+        # own source_path, never from this string). A genuinely injected header would show up
+        # as its own entry in response.headers.
+        assert "X-Injected" not in response.headers
+
+
 class TestJobEndpoints:
     def test_job_status_is_returned(self, env) -> None:
         client, registry, *_ = env

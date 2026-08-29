@@ -232,6 +232,31 @@ def _admission_check(
     return oversized, counts
 
 
+def _bbox_reliable(record: dict[str, Any], provenance: list[dict[str, Any]]) -> bool:
+    """True only when every ``provenance`` bbox denotes this exact chunk's own text.
+
+    A chunk produced by recursive splitting (``was_recursively_split``) or by
+    merging two chunks (``merged_from_chunk_ids``) inherits its source
+    element's/constituents' whole bbox unchanged -- that bbox covers the
+    *original* paragraph/table row/figure, not the specific sub-passage this
+    chunk actually contains, so it must never be presented as an exact
+    highlight. Never estimated: only True when the chunker itself recorded an
+    un-split, un-merged chunk with a bbox on every provenance entry.
+    """
+    if record.get("was_recursively_split"):
+        return False
+    if record.get("merged_from_chunk_ids"):
+        return False
+    if not provenance:
+        return False
+    return all(p.get("bbox") is not None for p in provenance)
+
+
+def _simplify_provenance(provenance: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop ``charspan`` (not needed past retrieval); keep ``page_no``/``bbox`` only."""
+    return [{"page_no": p.get("page_no"), "bbox": p.get("bbox")} for p in provenance]
+
+
 def _build_metadata(
     record: dict[str, Any],
     *,
@@ -240,6 +265,7 @@ def _build_metadata(
     recomputed_token_count: int,
 ) -> dict[str, Any]:
     warnings = record.get("warnings") or []
+    provenance = record.get("provenance") or []
     fields = {
         "document_id": record.get("document_id"),
         "source_sha256": record.get("source_sha256"),
@@ -257,6 +283,8 @@ def _build_metadata(
         "token_count": recomputed_token_count,
         "index_schema_version": "1.0.0",
         "warnings_summary": "; ".join(warnings)[:200],
+        "provenance": _simplify_provenance(provenance),
+        "bbox_reliable": _bbox_reliable(record, provenance),
     }
     safe = chroma_safe_metadata(fields)
     # content_hash must reflect content/config only, never provenance that legitimately varies

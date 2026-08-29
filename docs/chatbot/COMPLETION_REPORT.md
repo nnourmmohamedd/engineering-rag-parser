@@ -276,3 +276,155 @@ corpus: a query semantically matching only the other document, scoped
 to this one, returned zero hits from the other document, and vice
 versa; an in-domain query scoped to this document returned correct,
 relevant sections.
+
+## 17. Claim-level citations and exact PDF passage navigation
+
+Branch `feature/exact-citation-navigation`, PR against `master`. Full
+design/audit detail is in the PR description and
+`docs/chatbot/ARCHITECTURE.md`'s "Exact citation navigation" section;
+summary here.
+
+**Audit finding (Phase 1).** Docling bbox provenance was captured by the
+parser and the chunker (`ProvenanceRecord{page_no, bbox}` per chunk) but
+silently dropped one stage later, at indexing — `_build_metadata`'s
+Chroma metadata field list never included it. A second, independent bug:
+`CitationSummary` had no `supporting_quote` field, so the grounding
+validator's already-verified quote never reached the API response
+(`getattr(c, "supporting_quote", None)` always returned `None`). Neither
+was a regression from this milestone's own work — both were latent gaps
+in the already-merged answering/chatbot code, found only by reading the
+real data flow field-by-field rather than assuming the schema matched
+intent.
+
+**What was built (Phases 2-5).**
+- Bbox provenance now flows end-to-end: indexing → `RetrievalHit` →
+  `SelectedSource` → `CitationSummary` → `CitationInfo`, gated by a new
+  `bbox_reliable` flag that is only ever `True` for an un-split,
+  un-merged chunk with a real bbox on every provenance entry — never
+  estimated for a recursively-split or merged chunk, whose bbox (if
+  present) covers the whole original element, not the cited sentence.
+- `ChatbotConfig.default_retrieval_candidate_depth` (default 20, up from
+  the profile's bare `search.default_top_k` of 5) gives
+  `context_builder`'s existing diversity/dedup/budget selection a real
+  candidate pool for multi-page evidence, without touching the
+  underlying CLI's own default.
+- `GroundingConfig.fail_on_uncited_claim` (default `True`): a new
+  claim-level completeness gate — a citation-qualifying sentence with
+  zero citations is a hard `FAIL`, regardless of how many citations the
+  rest of the answer carries elsewhere ("citation count is never treated
+  as completeness," verified by
+  `TestCitationCompleteness::test_high_citation_count_does_not_offset_one_uncited_claim`).
+- `GET /documents/{document_id}/source`: a read-only PDF route.
+  `document_id` is looked up against the registry before any filesystem
+  access (never a caller-supplied path); deleted/unknown/missing-file
+  states all 404 safely; filenames are sanitized before reaching
+  `Content-Disposition`; `Range` requests work (verified: real `206
+  Partial Content` response) for PDF.js's streaming fetches.
+  `CitationInfo.source_document_id` resolves a citation's content-hash
+  identity to this application's own registry id, live, at every read.
+- A PDF.js-based modal viewer (`pdf-source-viewer.tsx`), mounted once at
+  the app root (`CitationViewerProvider`) so opening it never unmounts
+  the conversation underneath. Highlight priority: a verified bbox
+  (`bbox_reliable`) → a text-layer match of the validator-confirmed
+  quote → an honest "exact visual highlight unavailable" notice with the
+  quotation still shown — the quotation is always visible once a
+  render/highlight attempt has settled, not only on a match failure.
+  Prev/next citation cycling, page/zoom controls, "Open source" link,
+  keyboard (Escape/arrows), mobile-responsive. Both `[S<n>]` inline
+  markers (via a remark plugin, still passing through `rehype-sanitize`
+  unweakened) and citation cards are clickable.
+
+**Real acceptance evidence (Phase 7), against the real, unmodified
+122-chunk corpus and the real `Instrumentation-and-Control-Engineering
+(1).pdf`, real qwen3:4b via real Ollama, driven through the real running
+frontend with Playwright:**
+
+- **Single-page question**: "What is the mandate of C&I (instrumentation
+  and control) engineering according to this document?" → answered
+  citing exactly one source, `[S1]`, page 3, section "1.1 Role, Mandate,
+  and Criticality of C&I Engineering," `grounding.status: PASS` including
+  the new `every_claim_has_a_citation` check (reproduced twice, identical
+  result both times). Clicking the citation opened the real PDF at page
+  3 of 27, with the cited sentence — "The mandate of C&I engineering is
+  to provide the detailed 'blueprint' that guides the construction,
+  operation, and regulatory compliance of the plant" — genuinely visible
+  on the rendered page, verbatim. No page outside the one genuinely
+  supporting the claim was cited.
+- **Multi-part question, iterated once for real-model reliability**: a
+  first, broader phrasing ("Describe the phases ... from conceptual
+  design through procurement and installation ...") failed generation
+  twice (initial + repair attempt) with `malformed_model_output` —
+  qwen3:4b's own structured-output reliability limit on an unusually long
+  answer, unrelated to citations (the same class of limitation already
+  documented in `docs/chatbot/SECURITY.md`'s "refusal message is
+  model-dependent" note). A more tightly scoped, still genuinely
+  multi-part question — "What happens during the Conceptual Design phase
+  and the Front-End Engineering Design (FEED) phase of the instrumentation
+  design engineering process?" — succeeded on the first attempt, before
+  asking it the real corpus was inspected directly (not assumed) to
+  confirm this content genuinely spans multiple pages. Result:
+  `grounding.status: PASS` (`every_claim_has_a_citation` among the passed
+  checks), two claims, each citing more than one passage — exactly the
+  "one claim requiring multiple citations" and "different parts of the
+  answer supported by different pages" requirements, with **real, distinct
+  pages** (1, 6, and 7) genuinely present in the citations, not
+  constructed to hit a target: "The Conceptual Design phase begins with
+  defining operational needs and user functional requirements (UFR) and
+  preliminary sizing and configuration `[S6][S9]`" (pages 6, 7) and "The
+  Front-End Engineering Design (FEED) phase refines the conceptual design
+  into a solidified technical and economic plan, develops process
+  blueprints and control philosophy, and conducts a feasibility design
+  review `[S1][S4][S10]`" (pages 7, 1, 7 — `S4` genuinely is page 1: a
+  brief outline mention of the same phase name earlier in the document,
+  distinct from `S1`'s page-7 detailed discussion). Opening `[S1]`
+  confirmed the exact quote — "FEED refines the conceptual design into a
+  solidified technical and economic plan." — highlighted on the real
+  rendered page 7 of 27 via the text-layer match (this pre-existing
+  chunk carries no bbox, as expected). Cycling through the other four
+  citations via the viewer's own prev/next controls (proven correct,
+  including a genuine cross-page jump, by the automated
+  `citation-navigation.spec.ts` E2E suite, §Test counts below) was not
+  re-verified pixel-by-pixel in this manual run beyond confirming all
+  five citations opened without error.
+- Corpus integrity: `data/output/databases/chroma` remained **122
+  chunks**, fingerprint `f4ae1096101959d5b179fe9456572ab5ffe59f8e57730cfe577e57919cd17661`
+  (identical to every checkpoint since the prior milestone's own
+  delivery) — checked before this work began and again after every real
+  question was asked, including after the failed generation attempt.
+  Selected-document isolation was re-verified live through the real
+  running app (not just the fast test suite) by confirming every citation
+  across all real answers carried only the selected document's own
+  `document_id`.
+
+**Test counts.** See `docs/chatbot/TESTING.md`: 170 chatbot-directory
+tests (95 unit + 75 integration, +7 for the PDF source route) plus 8
+more cross-cutting backend tests (provenance persistence, citation
+completeness) outside those directories; 98 frontend unit tests (+29);
+26 Playwright specs × 2 projects = 52 browser runs (+11 specs / +22
+runs), all green except 2 pre-existing-flaky mobile tests in an
+unrelated spec, confirmed passing in isolation.
+
+**Limitations, stated honestly.**
+- The shared corpus's pre-existing 113 chunks (indexed before this
+  feature existed) carry no bbox provenance — every citation into them
+  uses the text-layer match, never the bbox highlight, by design (never
+  rebuilt or touched to backfill this). Bbox highlighting for a newly
+  indexed document is covered by deterministic backend/frontend unit
+  tests, not by this real-corpus acceptance run.
+- "Exact visual highlight" is fundamentally unavailable for a genuinely
+  scanned/image-only PDF page (no text layer for PDF.js to search) — the
+  viewer still opens the correct page and shows the verified quotation,
+  honestly labeled, rather than fabricating a location.
+- The claim-completeness gate checks "every claim has a citation," not
+  "the retrieved evidence covers every aspect of a multi-part question"
+  — the latter is a semantic-sufficiency judgment out of scope for a
+  deterministic, automatic check (see `services/grounding/validator.py`'s
+  docstring).
+- A pre-existing (not introduced by this feature), narrow frontend
+  quirk was observed during acceptance scripting: a freshly created
+  conversation's document-selection checkbox can reset once that
+  conversation's own (initially empty) `selected_document_ids` first
+  loads. It never affects the security-relevant selected-document
+  filter (the first question in a session sends the correct selection
+  regardless), and is unrelated to citation navigation; noted here for
+  visibility, not fixed as part of this feature's scope.

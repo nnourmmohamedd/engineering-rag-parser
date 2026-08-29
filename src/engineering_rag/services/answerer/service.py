@@ -204,7 +204,7 @@ class GroundedAnswerService:
 
         report = report.model_copy(update={"repair_attempted": repair_attempted})
         status = self._resolve_status(draft, report)
-        citations = self._build_citation_summaries(draft, context) if status == "answered" else []
+        citations = self._build_citation_summaries(draft, context, report) if status == "answered" else []
         answer_text = (
             draft.answer
             if status in ("answered", "insufficient_evidence")
@@ -312,9 +312,15 @@ class GroundedAnswerService:
         return "answered"
 
     def _build_citation_summaries(
-        self, draft: LLMAnswerDraft, context: ContextPackage
+        self, draft: LLMAnswerDraft, context: ContextPackage, report: GroundingReport
     ) -> list[CitationSummary]:
         by_id = {s.citation_id: s for s in context.selected_sources}
+        # Only a quote the validator actually confirmed (after normalization) against the
+        # cited source's own text is ever surfaced -- an unverified or mismatched quote is
+        # never shown as if it were exact supporting evidence.
+        verified_quote_by_id = {
+            q.citation_id: q.supporting_quote for q in report.quote_checks if q.found_normalized
+        }
         seen: set[str] = set()
         summaries = []
         for cid in draft.citations_used:
@@ -335,6 +341,9 @@ class GroundedAnswerService:
                     bm25_rank=s.bm25_rank,
                     reranker_rank=s.reranker_rank,
                     similarity_score=s.similarity_score,
+                    supporting_quote=verified_quote_by_id.get(cid),
+                    provenance=list(s.provenance),
+                    bbox_reliable=s.bbox_reliable,
                 )
             )
         return sorted(summaries, key=lambda c: _citation_sort_key(c.citation_id))

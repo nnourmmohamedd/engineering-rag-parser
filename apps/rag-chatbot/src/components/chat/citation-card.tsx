@@ -1,18 +1,32 @@
-import { FileWarning, Quote } from 'lucide-react';
+import { BookOpen, FileWarning, Quote } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useCitationViewer } from '@/hooks/use-citation-viewer';
 import type { Citation } from '@/lib/types';
 
 /**
  * One citation, expandable to show its supporting quote and full provenance
  * (source file, page, section, chunk id) -- everything needed to
- * independently verify the claim it backs.
+ * independently verify the claim it backs. "Open source" jumps to the exact
+ * cited page in the PDF viewer, highlighting the passage when possible.
  */
-export function CitationCard({ citation }: { citation: Citation }) {
+export function CitationCard({
+  citation,
+  allCitations,
+  index,
+}: {
+  citation: Citation;
+  /** Every citation in the same answer, so the viewer's prev/next controls can cycle
+   * through them. Defaults to just this one citation when not supplied. */
+  allCitations?: Citation[];
+  index?: number;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const { openCitation } = useCitationViewer();
   const panelId = `citation-panel-${citation.citation_id}`;
+  const canOpenSource = citation.source_available && citation.source_document_id !== null;
 
   return (
     <div className="rounded-md border bg-card text-sm">
@@ -57,6 +71,17 @@ export function CitationCard({ citation }: { citation: Citation }) {
                 "{citation.supporting_quote}"
               </blockquote>
             </div>
+          )}
+          {canOpenSource && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs"
+              onClick={() => openCitation(allCitations ?? [citation], index ?? 0)}
+            >
+              <BookOpen className="h-3 w-3" aria-hidden="true" />
+              Open source
+            </Button>
           )}
         </div>
       )}

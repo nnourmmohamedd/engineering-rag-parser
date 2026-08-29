@@ -72,6 +72,11 @@ class GroundingReport(_Model):
     citation_coverage_ratio: float | None = Field(
         default=None, description="Fraction of citation-qualifying sentences carrying an inline citation."
     )
+    uncited_claims: list[str] = Field(
+        default_factory=list,
+        description="Citation-qualifying sentences (technical/factual claims) that carry zero inline "
+        "citations -- the claim-level detail behind citation_coverage_ratio, not just its count.",
+    )
 
     checks_passed: list[str] = Field(default_factory=list)
     checks_failed: list[str] = Field(default_factory=list)

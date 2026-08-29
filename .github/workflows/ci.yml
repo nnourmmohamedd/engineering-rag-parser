@@ -201,7 +201,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # pdfjs-dist >=6 (the citation-navigation viewer's PDF rendering
+          # library) declares "engines.node": ">=22.13.0 || >=24" -- it
+          # references the JS Iterator global at module-eval time, which
+          # Node 20 doesn't provide, failing every test that imports
+          # src/lib/pdf.ts under Node 20 (not a browser-compat concern:
+          # Vite's build output still targets the browsers this app
+          # already supports, this is purely the Node version driving the
+          # test/build tooling itself).
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: apps/rag-chatbot/package-lock.json
 

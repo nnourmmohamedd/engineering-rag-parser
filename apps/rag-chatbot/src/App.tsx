@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { ErrorBoundary } from '@/components/layout/error-boundary';
+import { CitationViewerProvider } from '@/hooks/use-citation-viewer';
 import { useTheme } from '@/hooks/use-theme';
 import { queryClient } from '@/lib/query-client';
 import { ChatPage } from '@/pages/chat-page';
@@ -21,15 +22,17 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <ErrorBoundary>
-          <AppShell>
-            <Routes>
-              <Route path="/" element={<ChatPage />} />
-              <Route path="/documents" element={<DocumentsPage />} />
-              <Route path="/documents/:documentId" element={<DocumentDetailPage />} />
-              <Route path="/system" element={<SystemPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </AppShell>
+          <CitationViewerProvider>
+            <AppShell>
+              <Routes>
+                <Route path="/" element={<ChatPage />} />
+                <Route path="/documents" element={<DocumentsPage />} />
+                <Route path="/documents/:documentId" element={<DocumentDetailPage />} />
+                <Route path="/system" element={<SystemPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </AppShell>
+          </CitationViewerProvider>
         </ErrorBoundary>
         <ToasterWithTheme />
       </Router>

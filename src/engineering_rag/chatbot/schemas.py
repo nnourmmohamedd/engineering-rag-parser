@@ -249,6 +249,13 @@ class ConversationSummary(_Schema):
         )
 
 
+class ProvenanceEntryInfo(_Schema):
+    """One page/bbox provenance entry for a citation. ``bbox`` is ``(l, t, r, b)`` PDF points."""
+
+    page_no: int
+    bbox: list[float] | None = None
+
+
 class CitationInfo(_Schema):
     citation_id: str
     chunk_id: str | None = None
@@ -258,6 +265,14 @@ class CitationInfo(_Schema):
     section_title: str | None = None
     supporting_quote: str | None = None
     content_hash: str | None = None
+    provenance: list[ProvenanceEntryInfo] = Field(default_factory=list)
+    #: True only when provenance's bbox denotes this exact chunk's own text (never split/merged).
+    bbox_reliable: bool = False
+    #: This application's own registry id for the source document, resolved live from
+    #: `document_id` (the pipeline's content-hash identity) -- use this, never `document_id`,
+    #: to fetch the PDF from GET /documents/{source_document_id}/source. None when no
+    #: non-deleted registry entry for this content exists (matches source_available=False).
+    source_document_id: str | None = None
     #: True when the cited document has since been deleted. The citation is
     #: never rewritten -- history stays honest, the UI just marks it stale.
     source_available: bool = True
@@ -282,8 +297,16 @@ class MessageResponse(_Schema):
 
     @classmethod
     def from_record(
-        cls, record: ConversationMessageRecord, *, available_document_ids: set[str] | None = None
+        cls, record: ConversationMessageRecord, *, source_index: dict[str, str] | None = None
     ) -> MessageResponse:
+        """Render one stored message.
+
+        ``source_index`` maps a citation's ``document_id`` (the pipeline's content-hash
+        identity -- see ``services/chunker/ids.py``) to this application's own registry id
+        for that content's canonical, currently-available document, computed live by the
+        caller (``chatbot/app.py``) so a source deleted after the citation was created is
+        correctly reflected without ever rewriting the stored citation itself.
+        """
         citations: list[CitationInfo] = []
         for raw in record.citations:
             # Stored citations are always plain dicts (they round-trip through
@@ -292,9 +315,10 @@ class MessageResponse(_Schema):
             info = CitationInfo.model_validate(
                 {k: v for k, v in raw.items() if k in CitationInfo.model_fields}
             )
-            if available_document_ids is not None and info.document_id is not None:
+            if source_index is not None and info.document_id is not None:
+                resolved = source_index.get(info.document_id)
                 info = info.model_copy(
-                    update={"source_available": info.document_id in available_document_ids}
+                    update={"source_available": resolved is not None, "source_document_id": resolved}
                 )
             citations.append(info)
         return cls(

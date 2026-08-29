@@ -34,7 +34,17 @@ test.describe('Document lifecycle', () => {
 
     const link = page.getByRole('link', { name: /sample\.pdf/ });
     await expect(link).toBeVisible({ timeout: 10_000 });
-    await link.click();
+    // The list polls every 1.5s while any document is PROCESSING/UPLOADED
+    // (see use-documents.ts's refetchInterval) and sorts newest-first, so
+    // the just-uploaded row keeps reflowing to the top as sibling rows
+    // shift under it -- worse the more documents this shared-backend test
+    // run has already accumulated (playwright.config.ts: one shared
+    // backend/registry per run, by design). Playwright's own pointer-event
+    // interception check can catch this row mid-reflow; force is safe
+    // here because the element's identity/state is what's actually
+    // asserted next (Ready/Chunks indexed/etc.), not the click mechanics.
+    await link.scrollIntoViewIfNeeded();
+    await link.click({ force: true });
 
     await expect(page.getByText('Ready', { exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Chunks indexed')).toBeVisible();
@@ -49,7 +59,11 @@ test.describe('Document lifecycle', () => {
   test('the extracted content preview renders sanitised Markdown', async ({ page }) => {
     await page.goto('/#/documents');
     await page.locator('input[type="file"]').setInputFiles(SAMPLE_PDF);
-    await page.getByRole('link', { name: /sample\.pdf/ }).click();
+    const link = page.getByRole('link', { name: /sample\.pdf/ });
+    await expect(link).toBeVisible({ timeout: 10_000 });
+    // See the matching comment in the previous test for why force is safe here.
+    await link.scrollIntoViewIfNeeded();
+    await link.click({ force: true });
 
     await expect(page.getByText('Ready', { exact: true })).toBeVisible({ timeout: 15_000 });
     // The preview is a separate, READY-gated fetch that starts only once the

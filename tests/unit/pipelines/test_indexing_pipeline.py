@@ -31,7 +31,13 @@ _TOKENIZER = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 def _chunk_record(
-    chunk_id: str, index: int, text: str | None = None, source_filename: str = "doc.pdf"
+    chunk_id: str,
+    index: int,
+    text: str | None = None,
+    source_filename: str = "doc.pdf",
+    provenance: list[dict[str, Any]] | None = None,
+    was_recursively_split: bool = False,
+    merged_from_chunk_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     if text is None:
         text = f"Some faithful chunk content about valve number {index}, unique per chunk."
@@ -52,14 +58,14 @@ def _chunk_record(
         "captions": [],
         "labels": ["text"],
         "page_numbers": [1],
-        "provenance": [],
+        "provenance": provenance if provenance is not None else [],
         "source_element_refs": [f"#/texts/{index}"],
         "parent_chunk_id": None,
         "previous_chunk_id": None,
         "next_chunk_id": None,
-        "merged_from_chunk_ids": None,
+        "merged_from_chunk_ids": merged_from_chunk_ids,
         "split_method": "hierarchical",
-        "was_recursively_split": False,
+        "was_recursively_split": was_recursively_split,
         "overlap_tokens_before": 0,
         "table_metadata": None,
         "figure_asset_path": None,
@@ -137,6 +143,127 @@ class TestHappyPath:
         result = run_indexing_pipeline(run_dir, config, embedder=FakeEmbeddingService())
         assert result.manifest.config_hash == config.config_hash()
         assert result.manifest.embedding_dimension == 768
+
+
+def _stored_metadata(config: IndexingConfig, chunk_id: str) -> dict[str, Any]:
+    from engineering_rag.databases.chroma import get_client
+
+    client = get_client(config.chroma.persistence_path, telemetry=config.chroma.telemetry)
+    collection = client.get_collection(config.chroma.collection_name)
+    got = collection.get(ids=[chunk_id], include=["metadatas"])
+    metadatas = got.get("metadatas") or []
+    return metadatas[0] if metadatas else {}
+
+
+class TestProvenance:
+    """Bbox provenance must survive indexing (it used to be silently dropped -- see
+    docs/chatbot/COMPLETION_REPORT.md) and bbox_reliable must be computed correctly."""
+
+    def test_provenance_and_reliable_bbox_are_persisted(self, tmp_path: Path) -> None:
+        run_dir = tmp_path / "chunker_run"
+        run_dir.mkdir()
+        record = _chunk_record(
+            "chunk_0000", 0, provenance=[{"page_no": 3, "bbox": [10.0, 700.0, 200.0, 650.0]}]
+        )
+        (run_dir / "chunks.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+        manifest = {
+            "run_id": "run1",
+            "tokenizer": {"name": _TOKENIZER, "max_tokens": 256},
+            "source": {"filename": "doc.pdf", "sha256": "docsha256"},
+        }
+        (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (run_dir / "validation_report.json").write_text(json.dumps({"status": "PASS"}), encoding="utf-8")
+
+        config = _config(tmp_path)
+        run_indexing_pipeline(run_dir, config, embedder=FakeEmbeddingService())
+
+        meta = _stored_metadata(config, "chunk_0000")
+        assert meta["bbox_reliable"] is True
+        stored_provenance = json.loads(meta["provenance"])
+        assert stored_provenance == [{"page_no": 3, "bbox": [10.0, 700.0, 200.0, 650.0]}]
+
+    def test_recursively_split_chunk_is_not_bbox_reliable(self, tmp_path: Path) -> None:
+        run_dir = tmp_path / "chunker_run"
+        run_dir.mkdir()
+        record = _chunk_record(
+            "chunk_0000",
+            0,
+            provenance=[{"page_no": 3, "bbox": [10.0, 700.0, 200.0, 650.0]}],
+            was_recursively_split=True,
+        )
+        (run_dir / "chunks.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+        manifest = {
+            "run_id": "run1",
+            "tokenizer": {"name": _TOKENIZER, "max_tokens": 256},
+            "source": {"filename": "doc.pdf", "sha256": "docsha256"},
+        }
+        (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (run_dir / "validation_report.json").write_text(json.dumps({"status": "PASS"}), encoding="utf-8")
+
+        config = _config(tmp_path)
+        run_indexing_pipeline(run_dir, config, embedder=FakeEmbeddingService())
+
+        meta = _stored_metadata(config, "chunk_0000")
+        # A bbox reflecting the whole pre-split element must never be presented as exact.
+        assert meta.get("bbox_reliable", False) is False
+
+    def test_merged_chunk_is_not_bbox_reliable(self, tmp_path: Path) -> None:
+        run_dir = tmp_path / "chunker_run"
+        run_dir.mkdir()
+        record = _chunk_record(
+            "chunk_0000",
+            0,
+            provenance=[{"page_no": 3, "bbox": [10.0, 700.0, 200.0, 650.0]}],
+            merged_from_chunk_ids=["chunk_aaaa", "chunk_bbbb"],
+        )
+        (run_dir / "chunks.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+        manifest = {
+            "run_id": "run1",
+            "tokenizer": {"name": _TOKENIZER, "max_tokens": 256},
+            "source": {"filename": "doc.pdf", "sha256": "docsha256"},
+        }
+        (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (run_dir / "validation_report.json").write_text(json.dumps({"status": "PASS"}), encoding="utf-8")
+
+        config = _config(tmp_path)
+        run_indexing_pipeline(run_dir, config, embedder=FakeEmbeddingService())
+
+        meta = _stored_metadata(config, "chunk_0000")
+        assert meta.get("bbox_reliable", False) is False
+
+    def test_missing_bbox_is_not_reliable_but_page_no_survives(self, tmp_path: Path) -> None:
+        """A table row with no Docling provenance bbox (see type_handlers/tables.py's
+        fallback) must never be claimed reliable, even though the page number is real."""
+        run_dir = tmp_path / "chunker_run"
+        run_dir.mkdir()
+        record = _chunk_record("chunk_0000", 0, provenance=[{"page_no": 7, "bbox": None}])
+        (run_dir / "chunks.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+        manifest = {
+            "run_id": "run1",
+            "tokenizer": {"name": _TOKENIZER, "max_tokens": 256},
+            "source": {"filename": "doc.pdf", "sha256": "docsha256"},
+        }
+        (run_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (run_dir / "validation_report.json").write_text(json.dumps({"status": "PASS"}), encoding="utf-8")
+
+        config = _config(tmp_path)
+        run_indexing_pipeline(run_dir, config, embedder=FakeEmbeddingService())
+
+        meta = _stored_metadata(config, "chunk_0000")
+        assert meta.get("bbox_reliable", False) is False
+        assert json.loads(meta["provenance"]) == [{"page_no": 7, "bbox": None}]
+
+    def test_no_provenance_omits_the_field_entirely(self, tmp_path: Path) -> None:
+        """An empty provenance list is genuinely no information -- chroma_safe_metadata
+        omits it rather than storing an empty-list placeholder (matches every other
+        list-valued metadata field's convention)."""
+        run_dir = _write_chunk_run(tmp_path)  # default fixture: provenance=[]
+        config = _config(tmp_path)
+        run_indexing_pipeline(run_dir, config, embedder=FakeEmbeddingService())
+
+        meta = _stored_metadata(config, "chunk_0000")
+        assert "provenance" not in meta
+        assert meta.get("bbox_reliable", False) is False
 
 
 class TestIdempotency:

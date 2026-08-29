@@ -74,6 +74,7 @@ internal detail.
 | `GET /documents/{document_id}/preview` | Extracted Markdown (`?max_characters=`, default 60,000) — **untrusted text; the frontend sanitises it, never renders raw HTML** |
 | `POST /documents/{document_id}/reprocess` | Re-run ingestion (optionally with a new `parser_profile`); bumps the document's version and submits a `REPROCESS` job |
 | `DELETE /documents/{document_id}` | Soft-delete: marks the document `DELETED`, removes its chunks from Chroma and rebuilds BM25 |
+| `GET /documents/{document_id}/source` | The original, registered source PDF bytes (`application/pdf`, inline `Content-Disposition`, `Range` requests honored) — see "Citation source PDF" below |
 
 Upload response (`201 Created`):
 
@@ -141,7 +142,11 @@ message:
     "source_filename": "...",
     "page_numbers": [1],
     "section_title": "2. Maintenance Schedule",
+    "supporting_quote": "The mechanical seal should be inspected every 2000 operating hours",
     "content_hash": "...",
+    "provenance": [{"page_no": 1, "bbox": [72.0, 700.5, 300.2, 688.1]}],
+    "bbox_reliable": true,
+    "source_document_id": "<this registry's own document_id, for GET .../source>",
     "source_available": true
   }],
   "grounding": {
@@ -181,8 +186,49 @@ applied **before** retrieval, not a post-hoc slice of a global search — see
 
 ### Citation availability after deletion
 
-A citation is never rewritten once persisted. `source_available` is
-recomputed on every read by checking whether the citation's document
-SHA-256 still belongs to a non-deleted document in the registry — so
-history stays honest (the exact answer and quote a user saw are preserved)
-while the UI can still flag that the source is gone.
+A citation is never rewritten once persisted. `source_available` and
+`source_document_id` are recomputed on every read (`chatbot/app.py`'s
+`_build_citation_source_index`) by checking whether the citation's
+document SHA-256 still resolves to a non-deleted, preferably `READY`,
+record in the registry — so history stays honest (the exact answer and
+quote a user saw are preserved) while the UI can still flag that the
+source is gone. `source_document_id` is `null` exactly when
+`source_available` is `false`.
+
+### Exact passage navigation: `provenance`, `bbox_reliable`, `supporting_quote`
+
+- `supporting_quote` is populated **only** when the grounding validator
+  confirmed (after its documented normalization) that the model's declared
+  quote is actually present in the cited chunk's own text — never an
+  unverified or mismatched quote (`services/answerer/service.py`'s
+  `_build_citation_summaries`).
+- `provenance` is a list of `{page_no, bbox}` entries, `bbox` in PDF
+  points as `[left, top, right, bottom]` (bottom-left page origin,
+  Docling's own convention), carried through unchanged from the parser via
+  the chunker (`services/chunker/models.py::ProvenanceRecord`) — never
+  estimated or synthesized anywhere in this pipeline.
+- `bbox_reliable` is `true` **only** when every `provenance` entry has a
+  real bbox **and** the chunk was neither recursively split nor merged
+  from other chunks (`pipelines/indexing_pipeline.py::_bbox_reliable`) —
+  a split/merged chunk's bbox (if present at all) covers the whole
+  original element, not the cited sub-passage, so it must never be
+  presented as an exact highlight.
+- A chunk indexed **before** this feature existed has no `provenance`
+  metadata at all (`provenance: []`, `bbox_reliable: false`) — this is
+  expected for the shared corpus's pre-existing chunks; the frontend
+  falls back to matching `supporting_quote` against the PDF's own text
+  layer, and to an honest "exact visual highlight unavailable" notice for
+  a genuinely scanned/image-only page.
+
+### Citation source PDF
+
+`GET /documents/{document_id}/source` serves the exact, registered PDF a
+citation's `source_document_id` points to — `document_id` here is always
+this application's own registry id (never the sha256 identity citations
+carry), looked up against the registry before any filesystem access, so
+the route can never open a caller-supplied path. A deleted, unknown, or
+on-disk-missing document all 404 with the same safe envelope; the display
+filename is sanitized before it ever reaches the `Content-Disposition`
+header. `Range` requests are honored (via Starlette's `FileResponse`),
+which is what lets the PDF.js-based viewer stream large PDFs page-by-page
+instead of downloading the whole file up front.
