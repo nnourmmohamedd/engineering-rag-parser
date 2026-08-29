@@ -28,6 +28,7 @@ from .errors import (
 )
 from .filters import build_where_clause
 from .models import (
+    ProvenanceEntry,
     RetrievalDiagnostics,
     RetrievalHit,
     RetrievalRequest,
@@ -72,6 +73,23 @@ def _decode_list_field(raw: Any) -> list[Any]:
     return []
 
 
+def _decode_bbox(raw: Any) -> tuple[float, float, float, float] | None:
+    if not isinstance(raw, list | tuple) or len(raw) != 4:
+        return None
+    left, top, right, bottom = raw
+    return (float(left), float(top), float(right), float(bottom))
+
+
+def _decode_provenance(raw: Any) -> list[ProvenanceEntry]:
+    entries = _decode_list_field(raw)
+    result: list[ProvenanceEntry] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("page_no") is None:
+            continue
+        result.append(ProvenanceEntry(page_no=int(entry["page_no"]), bbox=_decode_bbox(entry.get("bbox"))))
+    return result
+
+
 def _build_hit(
     rank: int, chunk_id: str, document: str, distance: float, metadata: dict[str, Any]
 ) -> RetrievalHit:
@@ -95,6 +113,8 @@ def _build_hit(
         next_chunk_id=meta.get("next_chunk_id"),
         source_element_refs=[str(r) for r in _decode_list_field(meta.get("source_element_refs"))],
         content_hash=meta.get("content_hash"),
+        provenance=_decode_provenance(meta.get("provenance")),
+        bbox_reliable=bool(meta.get("bbox_reliable", False)),
         metadata=meta,
     )
 

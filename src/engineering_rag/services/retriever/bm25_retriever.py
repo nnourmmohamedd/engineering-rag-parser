@@ -33,6 +33,7 @@ from engineering_rag.databases.bm25.models import BM25RawHit
 from .config import RetrievalSearchConfig
 from .errors import InvalidFilterError
 from .models import FilterValue, RetrievalHit
+from .retriever import _decode_provenance
 
 __all__ = ["BM25Retriever", "BM25SearchOutcome"]
 
@@ -75,6 +76,8 @@ def _raw_hit_to_retrieval_hit(raw: BM25RawHit) -> RetrievalHit:
         content_hash=record.content_hash,
         bm25_rank=raw.bm25_rank,
         bm25_score=raw.bm25_score,
+        provenance=_decode_provenance(record.metadata.get("provenance")),
+        bbox_reliable=bool(record.metadata.get("bbox_reliable", False)),
         metadata=dict(record.metadata),
     )
 

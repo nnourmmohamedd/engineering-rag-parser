@@ -43,6 +43,13 @@ class GroundingConfig(_Frozen):
         description="Below this fraction of citation-qualifying sentences carrying an inline citation, add "
         "a PASS_WITH_WARNINGS warning. Heuristic only -- see validator.py docstring.",
     )
+    fail_on_uncited_claim: bool = Field(
+        default=True,
+        description="A citation-qualifying sentence (see _qualifying_sentences) with zero inline "
+        "citations fails validation, not just a coverage warning. This is claim-level, not "
+        "aggregate: an answer with 5 total citations still fails here if even one qualifying "
+        "sentence has none of them -- citation count alone is never treated as completeness.",
+    )
 
     def effective_dict(self) -> dict[str, Any]:
         return json.loads(self.model_dump_json())

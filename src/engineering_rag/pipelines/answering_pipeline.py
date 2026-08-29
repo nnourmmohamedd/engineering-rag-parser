@@ -48,6 +48,7 @@ from engineering_rag.services.context_builder.neighbor_provider import NeighborP
 from engineering_rag.services.embedder import EmbeddingService
 from engineering_rag.services.reranker.interface import Reranker
 from engineering_rag.services.retriever import FilterValue, RetrievalResponse
+from engineering_rag.services.retriever.retriever import _decode_provenance
 
 __all__ = [
     "AnsweringValidationReport",
@@ -124,6 +125,8 @@ class ChromaNeighborProvider(NeighborProvider):
             chunk_index=meta.get("chunk_index"),
             previous_chunk_id=meta.get("previous_chunk_id"),
             next_chunk_id=meta.get("next_chunk_id"),
+            provenance=_decode_provenance(meta.get("provenance")),
+            bbox_reliable=bool(meta.get("bbox_reliable", False)),
         )
 
 

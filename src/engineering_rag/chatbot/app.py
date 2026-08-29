@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -25,7 +26,7 @@ from typing import Annotated, Any
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from engineering_rag import __version__
 from engineering_rag.chatbot.answering import (
@@ -380,6 +381,38 @@ def create_app(
             total_characters=len(markdown),
         )
 
+    @app.get(f"{API_PREFIX}/documents/{{document_id}}/source", tags=["documents"])
+    def document_source(document_id: str) -> FileResponse:
+        """Serve the original, registered source PDF -- read-only, for the citation viewer.
+
+        Security posture (see ``docs/chatbot/SECURITY.md``): ``document_id`` is looked up
+        against the registry before any filesystem access, so this route can never open a
+        path the caller supplies -- only ``DocumentRecord.source_path``, which this
+        application itself wrote at upload time (see ``chatbot/uploads.py``). A deleted or
+        unknown document id gets the same safe 404 as every other document route; a
+        registered document whose file is missing from disk (never expected in normal
+        operation) also 404s rather than leaking a path or raising. Starlette's
+        ``FileResponse`` handles ``Range`` requests natively, so PDF.js's own
+        range-fetching/streaming works without any extra code here.
+        """
+        record = _require_document(store, document_id)
+        if not record.source_path:
+            raise ChatbotError(
+                ErrorCode.DOCUMENT_NOT_FOUND, "This document has no stored source file.", http_status=404
+            )
+        source_path = Path(record.source_path)
+        if not source_path.is_file():
+            raise ChatbotError(
+                ErrorCode.DOCUMENT_NOT_FOUND, "This document's source file is unavailable.", http_status=404
+            )
+        safe_filename = _safe_download_filename(record.display_name)
+        return FileResponse(
+            path=source_path,
+            media_type="application/pdf",
+            filename=safe_filename,
+            content_disposition_type="inline",
+        )
+
     @app.post(f"{API_PREFIX}/documents/{{document_id}}/reprocess", tags=["documents"])
     def reprocess_document(document_id: str, parser_profile: str | None = None) -> JobSummary:
         record = _require_document(store, document_id)
@@ -497,11 +530,11 @@ def create_app(
         record = _require_conversation(store, conversation_id)
         # Citations carry the pipeline's own document identity (source
         # SHA-256, see services/chunker/ids.py), not this registry's id.
-        available = {d.sha256 for d in store.list_documents()}
+        source_index = _build_citation_source_index(store)
         return ConversationDetailResponse(
             conversation=ConversationSummary.from_record(record),
             messages=[
-                MessageResponse.from_record(m, available_document_ids=available)
+                MessageResponse.from_record(m, source_index=source_index)
                 for m in store.list_messages(conversation_id)
             ],
         )
@@ -588,10 +621,10 @@ def create_app(
         )
         # Citations carry the pipeline's own document identity (source
         # SHA-256, see services/chunker/ids.py), not this registry's id.
-        available = {d.sha256 for d in store.list_documents()}
+        source_index = _build_citation_source_index(store)
         return [
-            MessageResponse.from_record(user_message, available_document_ids=available),
-            MessageResponse.from_record(assistant_message, available_document_ids=available),
+            MessageResponse.from_record(user_message, source_index=source_index),
+            MessageResponse.from_record(assistant_message, source_index=source_index),
         ]
 
     return app
@@ -602,6 +635,19 @@ def create_app(
 
 def _sse(event: dict[str, Any]) -> str:
     return f"data: {json.dumps(event)}\n\n"
+
+
+#: Anything outside this set is stripped from a display filename before it is ever placed in
+#: a Content-Disposition header -- defense in depth against header injection (CR/LF, quotes)
+#: and path-separator confusion, even though the value is never used as a filesystem path.
+_UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9 ._()\-\[\]]+")
+
+
+def _safe_download_filename(display_name: str) -> str:
+    name = _UNSAFE_FILENAME_CHARS.sub("_", display_name).strip(" .") or "document"
+    if not name.lower().endswith(".pdf"):
+        name += ".pdf"
+    return name[:200]
 
 
 def _require_document(store: Registry, document_id: str) -> DocumentRecord:
@@ -616,6 +662,29 @@ def _require_conversation(store: Registry, conversation_id: str) -> Conversation
     if record is None:
         raise ChatbotError(ErrorCode.CONVERSATION_NOT_FOUND, "Conversation not found.", http_status=404)
     return record
+
+
+def _build_citation_source_index(store: Registry) -> dict[str, str]:
+    """Map a citation's ``document_id`` (content-hash identity) to one canonical, currently
+    non-deleted registry document id for that content -- used to resolve
+    ``CitationInfo.source_document_id``/``source_available`` live, so a document deleted after
+    a citation was created is reflected without ever rewriting the stored citation.
+
+    Content-hash identity is one-to-many with registry entries (the same PDF bytes can be
+    uploaded more than once, or re-uploaded after the original was deleted): among a sha256's
+    non-deleted records, a READY one is preferred; otherwise the most recently created
+    non-deleted record stands in, so a citation resolves to some currently-viewable version of
+    the content whenever one exists at all.
+    """
+    best_by_sha: dict[str, DocumentRecord] = {}
+    for record in store.list_documents():  # already excludes deleted, ordered created_at DESC
+        current = best_by_sha.get(record.sha256)
+        should_replace = current is None or (
+            record.status == DocumentStatus.READY.value and current.status != DocumentStatus.READY.value
+        )
+        if should_replace:
+            best_by_sha[record.sha256] = record
+    return {sha: record.document_id for sha, record in best_by_sha.items()}
 
 
 def _read_markdown(settings: ChatbotConfig, record: DocumentRecord) -> str:

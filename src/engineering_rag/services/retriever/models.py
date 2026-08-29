@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 __all__ = [
     "RETRIEVAL_RESPONSE_SCHEMA_VERSION",
     "FilterValue",
+    "ProvenanceEntry",
     "RetrievalDiagnostics",
     "RetrievalEvaluationCase",
     "RetrievalEvaluationResult",
@@ -60,6 +61,18 @@ class RetrievalRequest(_Model):
     )
 
 
+class ProvenanceEntry(_Model):
+    """One page/bbox provenance entry for a chunk, as recorded by the parser/chunker.
+
+    Mirrors ``services.chunker.models.ProvenanceRecord`` minus ``charspan``
+    (not needed past retrieval). ``bbox`` is ``(l, t, r, b)`` in PDF points,
+    exactly as Docling records it -- never fabricated or estimated here.
+    """
+
+    page_no: int
+    bbox: tuple[float, float, float, float] | None = None
+
+
 class RetrievalHit(_Model):
     """One retrieved chunk with its complete available provenance.
 
@@ -87,6 +100,16 @@ class RetrievalHit(_Model):
     next_chunk_id: str | None = None
     source_element_refs: list[str] = Field(default_factory=list)
     content_hash: str | None = None
+    provenance: list[ProvenanceEntry] = Field(
+        default_factory=list, description="Per-page bbox provenance, when the indexer recorded it."
+    )
+    bbox_reliable: bool = Field(
+        default=False,
+        description="True only when every provenance bbox denotes this exact chunk's own text -- "
+        "False for a chunk produced by recursive splitting or merging, where a bbox (if present) "
+        "covers the whole original element, not this specific sub-passage. Never set True by "
+        "estimation; only when the chunker recorded it as such.",
+    )
 
     # --- Hybrid retrieval / reranking evidence (all None in vector-only mode) ---
     final_rank: int | None = Field(
